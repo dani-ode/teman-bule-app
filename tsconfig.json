@@ -1,0 +1,46 @@
+{
+  "extends": "expo/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@/config/*": [
+        "src/config/*"
+      ],
+      "@/core/*": [
+        "src/core/*"
+      ],
+      "@/domain/*": [
+        "src/domain/*"
+      ],
+      "@/services/*": [
+        "src/services/*"
+      ],
+      "@/features/*": [
+        "src/features/*"
+      ],
+      "@/ui/*": [
+        "src/ui/*"
+      ],
+      "@/data/*": [
+        "src/data/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
+}

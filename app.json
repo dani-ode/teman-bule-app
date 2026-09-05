@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "TemanBule",
+    "slug": "teman-bule-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon/ios/AppIcon~ios-marketing.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon/web/icon-512-maskable.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/icon/web/icon-192.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#ffffff",
+          "image": "./assets/icon/web/icon-512.png",
+          "resizeMode": "contain"
+        }
+      ]
+    ]
+  }
+}

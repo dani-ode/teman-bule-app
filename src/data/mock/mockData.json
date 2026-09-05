@@ -1,0 +1,162 @@
+{
+  "userProfile": {
+    "id": "usr_99812",
+    "fullName": "Budi Santoso",
+    "email": "budi.santoso@example.com",
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+    "nativeLanguage": "Indonesian",
+    "targetLanguage": "English",
+    "proficiencyLevel": "B1",
+    "dailyGoalMinutes": 20,
+    "stats": {
+      "streakDays": 7,
+      "totalXp": 1450,
+      "lessonsCompleted": 12,
+      "totalPracticeMinutes": 185
+    },
+    "goals": [
+      {
+        "id": "goal_1",
+        "title": "Confident Job Interview Speaking",
+        "category": "Speaking",
+        "targetDate": "2026-10-15",
+        "completed": false
+      },
+      {
+        "id": "goal_2",
+        "title": "Master Past Perfect Tense",
+        "category": "Grammar",
+        "targetDate": "2026-09-30",
+        "completed": true
+      },
+      {
+        "id": "goal_3",
+        "title": "Business Email Etiquette",
+        "category": "Business",
+        "targetDate": "2026-11-01",
+        "completed": false
+      }
+    ],
+    "joinedAt": "2026-01-15T08:30:00Z"
+  },
+  "chatSessions": [
+    {
+      "sessionId": "sess_1001",
+      "topicTitle": "Daily Conversational Practice & Grammar Check",
+      "createdAt": "2026-09-05T09:00:00Z",
+      "lastMessageAt": "2026-09-05T10:14:02Z",
+      "messageCount": 4
+    }
+  ],
+  "chatHistory": [
+    {
+      "id": "msg_001",
+      "sessionId": "sess_1001",
+      "sender": "ai_tutor",
+      "text": "Halo Budi! Welcome back to TemanBule. How was your weekend? Tell me one interesting thing you did!",
+      "timestamp": "2026-09-05T10:12:00Z"
+    },
+    {
+      "id": "msg_002",
+      "sessionId": "sess_1001",
+      "sender": "user",
+      "text": "Yesterday I go to the supermarket for buying some apples.",
+      "timestamp": "2026-09-05T10:13:30Z"
+    },
+    {
+      "id": "msg_003",
+      "sessionId": "sess_1001",
+      "sender": "ai_tutor",
+      "text": "Sounds great! Here is a minor grammar refinement for your sentence:",
+      "timestamp": "2026-09-05T10:13:32Z",
+      "correction": {
+        "originalText": "Yesterday I go to the supermarket for buying some apples.",
+        "correctedText": "Yesterday I went to the supermarket to buy some apples.",
+        "explanation": "Use past simple verb 'went' instead of present tense 'go' for past events, and infinitive 'to buy' to state purpose.",
+        "grammarPoint": "Past Simple Tense & Infinitive of Purpose"
+      }
+    },
+    {
+      "id": "msg_004",
+      "sessionId": "sess_1001",
+      "sender": "user",
+      "text": "Ah I see! Thanks TemanBule. What kind of apples you like most?",
+      "timestamp": "2026-09-05T10:14:00Z"
+    },
+    {
+      "id": "msg_005",
+      "sessionId": "sess_1001",
+      "sender": "ai_tutor",
+      "text": "You're welcome! Let me help you polish that question:",
+      "timestamp": "2026-09-05T10:14:02Z",
+      "correction": {
+        "originalText": "What kind of apples you like most?",
+        "correctedText": "What kind of apples do you like the most?",
+        "explanation": "In English questions using present simple, include the auxiliary verb 'do' before the subject 'you'.",
+        "grammarPoint": "Question Formation (Auxiliary Verbs)"
+      }
+    }
+  ],
+  "lessonModules": [
+    {
+      "id": "les_101",
+      "title": "Mastering Business Email Openings",
+      "category": "Business English",
+      "level": "B1",
+      "estimatedMinutes": 15,
+      "completed": true,
+      "progressPercentage": 100,
+      "description": "Learn professional opening and closing phrases for formal workplace communications.",
+      "topics": [
+        {
+          "id": "top_1",
+          "title": "Formal Greetings",
+          "description": "Dear Mr. / Dear Ms. / To Whom It May Concern",
+          "iconName": "mail-outline"
+        },
+        {
+          "id": "top_2",
+          "title": "Stating Purpose",
+          "description": "I am writing in regards to...",
+          "iconName": "document-text-outline"
+        }
+      ]
+    },
+    {
+      "id": "les_102",
+      "title": "Small Talk in Tech & Startup Meetings",
+      "category": "Daily Conversation",
+      "level": "B1",
+      "estimatedMinutes": 20,
+      "completed": false,
+      "progressPercentage": 45,
+      "description": "Break the ice effortlessly before remote Zoom calls and standup meetings.",
+      "topics": [
+        {
+          "id": "top_3",
+          "title": "Weather & Weekend Icebreakers",
+          "description": "How was your weekend? Nice weather today!",
+          "iconName": "chatbubbles-outline"
+        }
+      ]
+    },
+    {
+      "id": "les_103",
+      "title": "Mastering Conditionals (If Clauses)",
+      "category": "Grammar & Syntax",
+      "level": "B2",
+      "estimatedMinutes": 25,
+      "completed": false,
+      "progressPercentage": 0,
+      "description": "Understand First, Second, and Third Conditionals for hypothetical situations.",
+      "topics": [
+        {
+          "id": "top_4",
+          "title": "Zero & First Conditional",
+          "description": "If it rains, we will stay indoors.",
+          "iconName": "options-outline"
+        }
+      ]
+    }
+  ]
+}

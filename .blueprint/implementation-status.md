@@ -67,6 +67,7 @@ Perintah dan hasil (25 Sep 2026):
 | Media storage signed URL | Unggah PDF/voice note tidak aktif | DEC-15 |
 | AI reply (Langflow/CallCraft) | Pesan user tersimpan durable; tidak ada balasan AI palsu di UI | DEC-10/11 |
 | Google native handoff | OAuthReturn mengarah ke system browser + restore; native exchange belum final | FE-02 |
+| App IDs/scheme untuk build/run | `android.package`/`ios.bundleIdentifier` + `expo-dev-client` ditambahkan sebagai dev placeholder | FE-01 proposed ([fe-01-app-identifiers.md](fe-01-app-identifiers.md)); signing/SDK/LiveKit matrix open |
 
 ## Keputusan implementasi yang diambil
 

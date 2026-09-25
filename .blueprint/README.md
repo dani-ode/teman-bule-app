@@ -41,6 +41,7 @@ Baseline repository saat ini adalah Expo SDK 51. Versi Expo/React Native/LiveKit
 | [implementation-status.md](implementation-status.md) | Status aktual integrasi backend, evidence dan blocker |
 | [testing-acceptance.md](testing-acceptance.md) | Verifikasi per fitur, failure matrix dan evidence |
 | [decision-register.md](decision-register.md) | Kontrak terbuka dan blocker aktivasi |
+| [fe-01-app-identifiers.md](fe-01-app-identifiers.md) | Proposal FE-01: app IDs, scheme dan native build setup (dev placeholder) |
 
 ## Batas otoritas
 

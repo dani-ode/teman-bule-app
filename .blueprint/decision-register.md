@@ -2,9 +2,9 @@
 
 Semua keputusan di bawah **open**. Pemilik berbasis peran perlu ditunjuk; proposal dokumen bukan approval. Backend DEC references mengacu `../teman-bule/.blueprint/decision-register.md` dari root frontend.
 
-| ID | Keputusan / output | Pemilik | Memblokir | Backend terkait |
-|---|---|---|---|---|
-| FE-01 | Supported iOS/Android/web, Expo SDK/React Native pin or upgrade, Development Build/EAS profiles, LiveKit/plugin matrix, navigation/query/validation/test libs, Bun pin, app IDs, schemes, signing and native permissions | Frontend + realtime + operasi | F1 dan native media | DEC-14 |
+| ID | Keputusan / output | Pemilik | Memblokir | Backend terkait | Status |
+|---|---|---|---|---|---|
+| FE-01 | Supported iOS/Android/web, Expo SDK/React Native pin or upgrade, Development Build/EAS profiles, LiveKit/plugin matrix, navigation/query/validation/test libs, Bun pin, app IDs, schemes, signing and native permissions | Frontend + realtime + operasi | F1 dan native media | DEC-14 | proposed — lihat [fe-01-app-identifiers.md](fe-01-app-identifiers.md) (app IDs/scheme dev placeholder; SDK/LiveKit/signing masih open) |
 | FE-02 | Native refresh transport, secure storage lifecycle, Google browser→app handoff, verified links, CSRF web, email reset/verify links | Backend + frontend + auth | F2 auth native/web | DEC-02, DEC-05 |
 | FE-03 | OpenAPI/DTO, integer wallet encoding, list pagination/history, credential metadata listing, active-session lookup, feature readiness/policy shape, idempotency exceptions/retention, upload/status URL, polling limits | Backend + frontend | API adapter fitur terkait | DEC-03, DEC-12 |
 | FE-04 | Chat stream endpoint/transport, auth headers, event ID/replay retention, cancel semantics dan native SSE parser | Backend + frontend | F4 chat streaming | DEC-10, DEC-12 |

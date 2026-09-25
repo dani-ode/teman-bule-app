@@ -8,9 +8,11 @@
     "icon": "./assets/icon/ios/AppIcon~ios-marketing.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "id.flyup.temanbule.dev"
     },
     "android": {
+      "package": "id.flyup.temanbule.dev",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon/web/icon-512-maskable.png",
         "backgroundColor": "#ffffff"

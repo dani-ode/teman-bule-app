@@ -53,6 +53,23 @@ Perintah dan hasil (25 Sep 2026):
 - `POST /calls/{id}:join-token` → **503 FEATURE_UNAVAILABLE** (menunggu
   DEC-14), ditampilkan UI sebagai state unavailable eksplisit.
 
+## Evidence perangkat (25 Sep 2026)
+
+Development build `id.flyup.temanbule.dev` berjalan di emulator `Pixel-10-Pro`
+(Android, React Navigation v6, react-native-screens 3.31.1). Diverifikasi lewat
+interaksi UI nyata (`uiautomator dump`, bukan screenshot):
+
+- Login → authenticated → Main 5 tab (Beranda/Chat/Panggilan/Podcast/Profil).
+- Home menampilkan kursus nyata `English Conversation B1` dari `GET /courses`
+  (katalog development di-seed via `scripts/seed_dev.sql` di repo backend).
+- Profile menampilkan email live + badge `Plan VIP` dari `GET /me/plan` dan
+  menu lengkap (Edit profil, Plan, Wallet, Pengaturan AI, Vocabulary, TOEFL,
+  Keamanan akun).
+- TOEFL attempt berhasil dibuat: `POST /toefl/attempts` → 201 `in_progress`
+  (sebelumnya 404 karena `toefl_test_versions` kosong; kini di-seed published).
+- `bun run test` → 18 unit tests lulus (error mapper, idempotency, DTO
+  decoding, message reducer).
+
 ## Blocker / gap yang tercatat (bukan diakali)
 
 | Gap | Dampak | Gate |
@@ -61,7 +78,7 @@ Perintah dan hasil (25 Sep 2026):
 | `GET /courses` tidak mengembalikan struktur unit→lesson; hanya ada `GET /lessons/{id}` | CourseDetail menampilkan state kontrak-daftar-belum-ada | FE-03 |
 | `PATCH /me/profile` belum diekspos | EditProfile read-only + state eksplisit | FE-03 |
 | Daftar podcast (`GET /podcasts`) belum diekspos | Library menampilkan state eksplisit, bukan daftar rekaan | FE-03 |
-| Katalog tes TOEFL (`GET /toefl/tests`) belum diekspos; perlu seed `toefl_test_versions` | Attempt dimulai dari ID versi tes manual | FE-03 + seed |
+| Katalog tes TOEFL (`GET /toefl/tests`) belum diekspos | Attempt dimulai dari ID versi tes manual (test version sudah di-seed published via `scripts/seed_dev.sql`) | FE-03 |
 | LiveKit join-token | Call/Podcast realtime unavailable | DEC-14/FE-05 |
 | Xendit checkout adapter | Top-up tidak aktif; wallet 404 sampai top-up pertama | DEC-07/FE-07 |
 | Media storage signed URL | Unggah PDF/voice note tidak aktif | DEC-15 |

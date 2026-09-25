@@ -9,6 +9,7 @@ import { getServices, AppServices } from '@/core/di/ServiceContainer';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { RootNavigator } from '@/core/navigation/RootNavigator';
 import { linking } from '@/core/navigation/linking';
+import { ErrorBoundary } from '@/ui/components/ErrorBoundary';
 import { ErrorState } from '@/ui/components/States';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { theme } from '@/ui/theme';
@@ -53,16 +54,18 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={services.queryClient}>
-        <AuthProvider session={services.session}>
-          <NavigationContainer linking={linking}>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </NavigationContainer>
-        </AuthProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <QueryClientProvider client={services.queryClient}>
+          <AuthProvider session={services.session}>
+            <NavigationContainer linking={linking}>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </NavigationContainer>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

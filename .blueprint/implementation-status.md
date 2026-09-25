@@ -68,6 +68,8 @@ Perintah dan hasil (25 Sep 2026):
 | AI reply (Langflow/CallCraft) | Pesan user tersimpan durable; tidak ada balasan AI palsu di UI | DEC-10/11 |
 | Google native handoff | OAuthReturn mengarah ke system browser + restore; native exchange belum final | FE-02 |
 | App IDs/scheme untuk build/run | `android.package`/`ios.bundleIdentifier` + `expo-dev-client` ditambahkan sebagai dev placeholder | FE-01 proposed ([fe-01-app-identifiers.md](fe-01-app-identifiers.md)); signing/SDK/LiveKit matrix open |
+| React Navigation v7 + screens 3.31 runtime error | Dipin ke React Navigation v6 (kompatibel Expo SDK 51); app berjalan di emulator | FE-01 Addendum A; upgrade v7 = pekerjaan terpisah |
+| Facts/assessment read UI | `GET /me/facts` & `/me/assessments` mengembalikan 404 (route belum ada di backend) | Backend router belum implement; FE-03 |
 
 ## Keputusan implementasi yang diambil
 

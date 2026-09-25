@@ -10,7 +10,12 @@ import { RootStackParamList } from './types';
 const prefix = Linking.createURL('/');
 
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [prefix, 'temanbule://'],
+  // Include the Expo development-client scheme so cold-start URLs from the
+  // dev client are not misparsed as app deep links.
+  prefixes: [prefix, 'temanbule://', 'exp+teman-bule-app://'],
+  // Only treat explicit app/auth paths as deep links; dev-client URLs carry
+  // an `expo-development-client` path that must not match any screen.
+  filter: (url) => !url.includes('expo-development-client'),
   config: {
     screens: {
       Auth: {

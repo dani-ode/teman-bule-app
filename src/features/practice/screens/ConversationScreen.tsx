@@ -8,11 +8,11 @@ import {
   useSendPracticeMessage,
   PendingMessage,
 } from '../hooks/usePractice';
+import { mergeMessages, MergedMessage } from '../hooks/messageReducer';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
 import { ErrorState } from '@/ui/components/States';
-import { ConversationMessage } from '@/domain/practice/practice.types';
 import { theme } from '@/ui/theme';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
@@ -35,10 +35,7 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
     }
   };
 
-  const merged: (ConversationMessage | PendingMessage)[] = [
-    ...(messages.data ?? []),
-    ...pendingMessages,
-  ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const merged: MergedMessage[] = mergeMessages(messages.data ?? [], pendingMessages);
 
   const isClosed = session.data?.state !== undefined && session.data.state !== 'active';
 

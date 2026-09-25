@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getServices } from '@/core/di/ServiceContainer';
 import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
 import { newIdempotencyKey } from '@/core/network/idempotency';
+import { dropPending, markPendingFailed } from './messageReducer';
 
 export const usePracticeSession = (sessionId: string | null) =>
   useQuery({
@@ -69,15 +70,13 @@ export const useSendPracticeMessage = (sessionId: string | null) => {
           text: text.trim(),
           clientMessageId,
         });
-        setPendingMessages((prev) => prev.filter((m) => m.messageId !== local.messageId));
+        setPendingMessages((prev) => dropPending(prev, local.messageId));
         qc.setQueryData<ConversationMessage[]>(
           ['practice', 'messages', sessionId],
           (old: ConversationMessage[] | undefined) => [...(old ?? []), persisted],
         );
       } catch (error) {
-        setPendingMessages((prev) =>
-          prev.map((m) => (m.messageId === local.messageId ? { ...m, failed: true } : m)),
-        );
+        setPendingMessages((prev) => markPendingFailed(prev, local.messageId));
         throw error;
       }
     },
@@ -88,7 +87,7 @@ export const useSendPracticeMessage = (sessionId: string | null) => {
     async (localMessageId: string) => {
       const target = pendingMessages.find((m) => m.messageId === localMessageId);
       if (!target || !sessionId) return;
-      setPendingMessages((prev) => prev.filter((m) => m.messageId !== localMessageId));
+      setPendingMessages((prev) => dropPending(prev, localMessageId));
       await send(target.localText);
     },
     [pendingMessages, send, sessionId],

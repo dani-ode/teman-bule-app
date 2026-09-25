@@ -90,3 +90,32 @@ terpisah, tidak diklaim di sini).
 | Frontend lead | _belum ditunjuk_ | pending | — |
 | Realtime/operasi | _belum ditunjuk_ | pending | — |
 | Produk (namespace final) | _belum ditunjuk_ | pending | — |
+
+## Addendum A: Pin versi React Navigation (kompatibilitas terbukti)
+
+Temuan lapangan (25 Sep 2026): `@react-navigation/*@7.x` memerlukan
+`react-native-screens >= 4.0.0`, sedangkan Expo SDK 51 (RN 0.74.5) menguji
+`react-native-screens@3.31.1`. Kombinasi v7 + screens 3.31 menimbulkan
+runtime error `TypeError: right operand of 'in' is not an object` di
+`SceneView`/`NativeStackView` (Hermes) dan, setelah downgrade, `Invariant
+Violation: Tried to register two views with the same name RNSScreenStack`
+akibat native/JS mismatch.
+
+Keputusan kompatibilitas (bagian dari FE-01 spike, evidence perangkat):
+
+| Paket | Versi dipin | Alasan |
+|---|---|---|
+| `@react-navigation/native` | `^6.1.18` | Pasangan terverifikasi screens 3.x / RN 0.74 / Expo SDK 51 |
+| `@react-navigation/native-stack` | `^6.11.0` | peer `react-native-screens >= 3.0.0` |
+| `@react-navigation/bottom-tabs` | `^6.6.1` | selaras v6 |
+| `react-native-screens` | `3.31.1` | versi Expo SDK 51 (`expo install`) |
+
+Evidence: setelah pin v6 + clean rebuild + uninstall app lama + `--clear`
+Metro, app `id.flyup.temanbule.dev` berjalan di emulator `Pixel-10-Pro`
+dengan log `ReactNativeJS: Running "main"` dan **tanpa** error render.
+Upgrade ke React Navigation v7 (atau screens v4) adalah pekerjaan tersendiri
+yang harus dibuktikan pada FE-01 lanjutan bersama keputusan upgrade Expo SDK.
+
+Catatan proses: error build pertama `checkDebugAarMetadata` adalah network
+read timeout saat Gradle mengunduh AAR — diselesaikan dengan retry (cache
+Gradle melanjutkan). Bukan masalah kode.

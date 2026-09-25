@@ -1,3 +1,5 @@
+> HISTORICAL / SUPERSEDED: prototype reference only. Binding rules: [AGENTS.md](../../AGENTS.md) and [engineering-rules.md](../../.blueprint/engineering-rules.md). Dependency direction and production contracts follow the current blueprint.
+
 # Rule Spec 01: Architecture & Directory Structure
 
 ## 1. Architectural Blueprint

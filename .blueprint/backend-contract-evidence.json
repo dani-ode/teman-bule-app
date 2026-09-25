@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-09-25",
+  "scope": "Documentation drift detection only; not runtime or production certification",
+  "sources": [
+    {"path": ".blueprint/api-events.md", "sha256": "508cbf748a5cac14d6ce141855c4e659ec24f4ee238d326688e0d341b4e5222c", "frontend": "api-contracts.md", "excerpt": "POST /v1/calls"},
+    {"path": ".blueprint/architecture.md", "sha256": "fc14fbdb17dd49901be114bb871128be4d03b2d6091bdd0c7350497ae6d59d8f", "frontend": "architecture.md", "excerpt": "Client <-> LiveKit <-> realtime worker"},
+    {"path": ".blueprint/auth-provider-policy.md", "sha256": "57c3dcc8b713cca4c7654bf161c133915e64590338aed4122c4a8c60f69aa6a7", "frontend": "auth-security.md", "excerpt": "Web memakai refresh cookie HttpOnly/Secure/SameSite"},
+    {"path": ".blueprint/billing-plans.md", "sha256": "de8c249a05acc9b74f661a907b1175c70fc17eec8b7f287e24c592e3ca457cf9", "frontend": "billing-provider.md", "excerpt": "Tidak ada billing bulanan/tahunan"},
+    {"path": ".blueprint/realtime-podcast.md", "sha256": "be61de1dce6d7a53123e92ea044414012deb0a476a774af34c2176eb00130a5d", "frontend": "livekit-realtime.md", "excerpt": "Langflow bukan per-turn dependency"},
+    {"path": ".blueprint/postgresql-schema.md", "sha256": "912d12a2dcde4d97ac785dc42b26349c8e93b87a955dbaa9f935afc1dce1e4ff", "frontend": "backend-alignment.md", "excerpt": "created → in_progress → submitted → evaluating → evaluated|evaluation_failed"},
+    {"path": ".blueprint/astra-collections.md", "sha256": "eddd7f560933a5b505c162f3c000d1f789c6f66eccebd532dd098e7521321cf6", "frontend": "podcast.md", "excerpt": "Gemini LLM → profile Gemini, OpenAI LLM → profile OpenAI"},
+    {"path": ".blueprint/implementation-plan.md", "sha256": "9b1af84437ebe4909e96230fb7dd87feac8a3a5372de7d42fe0320c2aacad1a4", "frontend": "implementation-plan.md", "excerpt": "Specification completeness is not production certification"},
+    {"path": ".blueprint/security-operations.md", "sha256": "85709215793734fc335a068116fa951c1d0d7a01206698689c8b7080c4a967ae", "frontend": "production-readiness.md", "excerpt": "Numeric SLOs and alerts must be approved before production"},
+    {"path": ".blueprint/product-requirements.md", "sha256": "7a80484e529e4ee1914ad36dcf70ef54f0e11e029584bec9586a3bad5140e9d3", "frontend": "product-navigation.md", "excerpt": "TOEFL berada pada navigasi Profile"},
+    {"path": ".blueprint/langflow-flows.md", "sha256": "61ee99cb2843c736b9eae48b8b92fedd0ce3a5c5c4d69a6ce8fd56e3216e6ec0", "frontend": "mcp-boundaries.md", "excerpt": "Tidak ada `realtime_turn` Langflow"},
+    {"path": ".blueprint/callcraft-tools.md", "sha256": "7268fc2cd2f3b555584be13b6b9eeab161d3bf98185a927643bbff675a0bea10", "frontend": "mcp-boundaries.md", "excerpt": "menyertakan `user_id` deployment"},
+    {"path": ".agents/mcp_config.json", "sha256": "b0b72fdb429496ae250fc6f1c6da88dd02324ca6dd7b91a47bca079a55b1a39f", "frontend": "mcp-boundaries.md", "excerpt": "https://callcraft-api.flyup.id/mcp/v1/sse"}
+  ]
+}

@@ -1,49 +1,105 @@
+import { QueryClient } from '@tanstack/react-query';
 import { envConfig } from '@/config/env.config';
-import { IUserService } from '@/domain/user/IUserService';
-import { IChatService } from '@/domain/chat/IChatService';
-import { ILessonService } from '@/domain/lesson/ILessonService';
-import { MockUserService } from '@/services/mock/MockUserService';
-import { MockChatService } from '@/services/mock/MockChatService';
-import { MockLessonService } from '@/services/mock/MockLessonService';
+import { AccessTokenStore } from '@/core/auth/AccessTokenStore';
+import { SessionCoordinator } from '@/core/auth/SessionCoordinator';
+import { HttpTransport } from '@/core/network/HttpTransport';
+import { SecureRefreshTokenStorage } from '@/core/storage/SecureRefreshTokenStorage';
+import { createAppQueryClient } from './queryClient';
+
+import { IAuthService } from '@/domain/auth/IAuthService';
+import { IAccountService } from '@/domain/account/IAccountService';
+import { IPracticeService } from '@/domain/practice/IPracticeService';
+import {
+  ILearningService,
+  IToeflService,
+  IVocabularyService,
+} from '@/domain/learning/ILearningServices';
+import { ICallService, IPodcastService } from '@/domain/realtime/IRealtimeServices';
+
+import { ApiAuthService } from '@/services/api/ApiAuthService';
+import { ApiAccountService } from '@/services/api/ApiAccountService';
+import { ApiPracticeService } from '@/services/api/ApiPracticeService';
+import {
+  ApiLearningService,
+  ApiToeflService,
+  ApiVocabularyService,
+} from '@/services/api/ApiLearningServices';
+import { ApiCallService, ApiPodcastService } from '@/services/api/ApiRealtimeServices';
 
 /**
- * Enterprise Central Dependency Injection Container & Service Registry.
- * Handles single-point provider resolution for Mock vs Real API services.
+ * Composition root (R02): selects concrete adapters. API mode requires all
+ * adapters the active feature set needs; a missing dependency fails
+ * explicitly, never a silent mock fallback.
+ *
+ * Mock composition was removed with the prototype (R03 bundle isolation):
+ * USE_MOCK_DATA=true fails fast because no mock drivers are bundled.
  */
-export class ServiceContainer {
-  private static instance: ServiceContainer | null = null;
-
-  public readonly userService: IUserService;
-  public readonly chatService: IChatService;
-  public readonly lessonService: ILessonService;
-
-  private constructor() {
-    if (envConfig.useMockData) {
-      this.userService = new MockUserService();
-      this.chatService = new MockChatService();
-      this.lessonService = new MockLessonService();
-    } else {
-      // Future Real API Services (e.g. RealUserService, RealChatService, RealLessonService)
-      // Throw fail-fast exception if production driver is not configured yet
-      throw new Error(
-        `[ServiceContainer] Production API drivers are not yet implemented. Set EXPO_PUBLIC_USE_MOCK_DATA=true in env.config.ts.`
-      );
-    }
-  }
-
-  public static getInstance(): ServiceContainer {
-    if (!ServiceContainer.instance) {
-      ServiceContainer.instance = new ServiceContainer();
-    }
-    return ServiceContainer.instance;
-  }
-
-  /**
-   * Reset container instance (useful for testing or manual provider overriding)
-   */
-  public static resetInstance(): void {
-    ServiceContainer.instance = null;
-  }
+export interface AppServices {
+  readonly mode: 'api' | 'mock';
+  readonly queryClient: QueryClient;
+  readonly session: SessionCoordinator;
+  readonly authService: IAuthService;
+  readonly accountService: IAccountService;
+  readonly practiceService: IPracticeService;
+  readonly vocabularyService: IVocabularyService;
+  readonly learningService: ILearningService;
+  readonly toeflService: IToeflService;
+  readonly callService: ICallService;
+  readonly podcastService: IPodcastService;
 }
 
-export const services = ServiceContainer.getInstance();
+const buildApiServices = (): AppServices => {
+  const tokenStore = new AccessTokenStore();
+  const refreshStorage = new SecureRefreshTokenStorage();
+  const queryClient = createAppQueryClient();
+
+  // SessionCoordinator and HttpTransport reference each other; build lazily.
+  let sessionRef: SessionCoordinator;
+  const transport = new HttpTransport(tokenStore, {
+    refresh: () => sessionRef.refresh(),
+    onSessionExpired: () => sessionRef.onSessionExpired(),
+  });
+
+  const authService = new ApiAuthService(transport, tokenStore, refreshStorage);
+  sessionRef = new SessionCoordinator(authService, tokenStore, refreshStorage);
+
+  // Purge per-user server cache and in-flight private requests on logout.
+  sessionRef.onLogout(() => {
+    queryClient.clear();
+  });
+
+  return {
+    mode: 'api',
+    queryClient,
+    session: sessionRef,
+    authService,
+    accountService: new ApiAccountService(transport),
+    practiceService: new ApiPracticeService(transport),
+    vocabularyService: new ApiVocabularyService(transport),
+    learningService: new ApiLearningService(transport),
+    toeflService: new ApiToeflService(transport),
+    callService: new ApiCallService(transport),
+    podcastService: new ApiPodcastService(transport),
+  };
+};
+
+let instance: AppServices | null = null;
+
+export const getServices = (): AppServices => {
+  if (instance) return instance;
+
+  if (!envConfig.useMockData) {
+    instance = buildApiServices();
+    return instance;
+  }
+
+  // Mock drivers are not bundled; fail fast with an explicit message.
+  throw new Error(
+    '[DI] EXPO_PUBLIC_USE_MOCK_DATA=true is not supported in this build: mock ' +
+      'drivers were removed with the prototype. Set EXPO_PUBLIC_USE_MOCK_DATA=false.',
+  );
+};
+
+export const resetServicesForTests = (): void => {
+  instance = null;
+};

@@ -1,3 +1,5 @@
+> HISTORICAL / SUPERSEDED: binding rules are [AGENTS.md](../../AGENTS.md) and [engineering-rules.md](../../.blueprint/engineering-rules.md). Preserve strict typing/accessibility principles through those current rules.
+
 # Rule Spec 03: Coding Standards & TypeScript Directives
 
 ## 1. Enterprise Directives

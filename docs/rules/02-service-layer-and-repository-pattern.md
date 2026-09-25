@@ -1,3 +1,5 @@
+> HISTORICAL / SUPERSEDED: prototype reference only. Binding rules: [AGENTS.md](../../AGENTS.md) and [engineering-rules.md](../../.blueprint/engineering-rules.md). Mock flag alone does not enable production drivers; this client envelope is not the backend wire format.
+
 # Rule Spec 02: Service Layer & Repository Pattern
 
 ## 1. Architectural Purpose

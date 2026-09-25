@@ -4,6 +4,7 @@
     "slug": "teman-bule-app",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "temanbule",
     "icon": "./assets/icon/ios/AppIcon~ios-marketing.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -26,7 +27,8 @@
           "image": "./assets/icon/web/icon-512.png",
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

@@ -1,3 +1,5 @@
+> HISTORICAL / SUPERSEDED: synthetic prototype fixtures, not production API contracts. Binding rules: [AGENTS.md](../../AGENTS.md) and [engineering-rules.md](../../.blueprint/engineering-rules.md); actual DTOs require backend-approved schemas.
+
 # Rule Spec 04: Mock Data & API Contracts
 
 ## 1. Domain Schemas & Specifications

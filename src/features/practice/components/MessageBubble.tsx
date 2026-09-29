@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ConversationMessage } from '@/domain/practice/practice.types';
 import { PendingMessage } from '../hooks/usePractice';
 import { Text } from '@/ui/components/Text';
@@ -21,6 +22,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
 
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAgent]}>
+      {!isUser ? (
+        <View style={styles.agentAvatar}>
+          <Ionicons name="person" size={16} color={theme.colors.primary[600]} />
+        </View>
+      ) : null}
       <View
         style={[
           styles.bubble,
@@ -31,7 +37,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
         accessibilityLabel={`${isUser ? 'Anda' : 'Tutor'}: ${text}`}
       >
         {pending && !message.failed ? (
-          <Badge label="Mengirim..." variant="neutral" style={styles.badge} />
+          <View style={styles.pendingRow}>
+            <Ionicons name="time-outline" size={14} color={theme.colors.text.muted} />
+            <Text variant="caption" color="muted" style={styles.pendingText}>
+              Mengirim...
+            </Text>
+          </View>
         ) : null}
         {pending && message.failed ? (
           <Badge label="Gagal terkirim" variant="warning" style={styles.badge} />
@@ -40,7 +51,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
           {text}
         </Text>
         {pending && message.failed && onRetry ? (
-          <Pressable onPress={onRetry} accessibilityRole="button" accessibilityLabel="Coba kirim ulang">
+          <Pressable
+            onPress={onRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Coba kirim ulang"
+            style={styles.retryButton}
+          >
+            <Ionicons name="refresh" size={14} color={theme.colors.primary[600]} />
             <Text variant="caption" weight="bold" color="primary" style={styles.retry}>
               Kirim ulang
             </Text>
@@ -52,11 +69,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', marginVertical: theme.spacing.xs },
+  row: { flexDirection: 'row', marginVertical: theme.spacing.xs, alignItems: 'flex-end' },
   rowUser: { justifyContent: 'flex-end' },
   rowAgent: { justifyContent: 'flex-start' },
+  agentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
   bubble: {
-    maxWidth: '85%',
+    maxWidth: '80%',
     borderRadius: theme.radii.lg,
     padding: theme.spacing.md,
     ...theme.shadows.bubble,
@@ -69,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.aiBubble,
     borderBottomLeftRadius: theme.radii.sm,
     borderWidth: 1,
-    borderColor: theme.colors.neutral[200],
+    borderColor: theme.colors.khaki[200],
   },
   bubbleFailed: {
     borderColor: theme.colors.semantic.error,
@@ -77,6 +104,19 @@ const styles = StyleSheet.create({
   },
   textUser: { color: theme.colors.text.inverse },
   textAgent: { color: theme.colors.text.primary },
+  pendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+  },
+  pendingText: {},
   badge: { marginBottom: theme.spacing.xs },
-  retry: { marginTop: theme.spacing.xs },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+  },
+  retry: {},
 });

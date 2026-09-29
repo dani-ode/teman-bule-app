@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
 import { getServices } from '@/core/di/ServiceContainer';
 import { userMessageForError } from '@/core/errors/errorMessage';
@@ -37,25 +38,38 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   if (sent) {
     return (
       <View style={styles.centerContainer}>
+        <View style={styles.successIcon}>
+          <Ionicons name="mail-open-outline" size={56} color={theme.colors.primary[600]} />
+        </View>
         <Text variant="title" weight="bold" style={styles.centerTitle}>
           Tautan terkirim
         </Text>
         <Text variant="body" color="secondary" style={styles.centerBody}>
           Jika alamat {email} terdaftar, kami mengirim tautan untuk mengatur ulang kata sandi.
         </Text>
-        <Button label="Kembali ke Masuk" onPress={() => navigation.navigate('Login')} style={styles.centerButton} />
+        <Button
+          label="Kembali ke Masuk"
+          onPress={() => navigation.navigate('Login')}
+          style={styles.centerButton}
+          icon="arrow-back-outline"
+        />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text variant="heading" weight="bold" style={styles.title}>
-        Lupa kata sandi
-      </Text>
-      <Text variant="body" color="secondary" style={styles.subtitle}>
-        Masukkan email Anda. Kami akan mengirim tautan pengaturan ulang.
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="key-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="heading" weight="bold" style={styles.title}>
+          Lupa kata sandi
+        </Text>
+        <Text variant="body" color="secondary" style={styles.subtitle}>
+          Masukkan email Anda. Kami akan mengirim tautan pengaturan ulang.
+        </Text>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -71,19 +85,49 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         keyboardType="email-address"
         autoCapitalize="none"
         editable={!submitting}
+        icon="mail-outline"
       />
 
-      <Button label="Kirim tautan" onPress={handleSubmit} disabled={!canSubmit} loading={submitting} />
+      <Button
+        label="Kirim tautan"
+        onPress={handleSubmit}
+        disabled={!canSubmit}
+        loading={submitting}
+        icon="send-outline"
+      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.xs },
-  subtitle: { marginBottom: theme.spacing.xl },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xxl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: { marginBottom: theme.spacing.xs, color: theme.colors.primary[700] },
+  subtitle: { marginBottom: theme.spacing.xl, textAlign: 'center' },
   errorBox: { marginBottom: theme.spacing.md },
-  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', backgroundColor: theme.colors.background.main },
+  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.main },
+  successIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.xl,
+  },
   centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
   centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
   centerButton: { alignSelf: 'center', minWidth: 200 },

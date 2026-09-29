@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
 import { getServices } from '@/core/di/ServiceContainer';
 import { userMessageForError } from '@/core/errors/errorMessage';
@@ -45,22 +46,35 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   if (done) {
     return (
       <View style={styles.centerContainer}>
+        <View style={styles.successIcon}>
+          <Ionicons name="checkmark-circle" size={56} color={theme.colors.semantic.success} />
+        </View>
         <Text variant="title" weight="bold" style={styles.centerTitle}>
           Kata sandi diperbarui
         </Text>
         <Text variant="body" color="secondary" style={styles.centerBody}>
           Silakan masuk dengan kata sandi baru Anda.
         </Text>
-        <Button label="Masuk" onPress={() => navigation.navigate('Login')} style={styles.centerButton} />
+        <Button
+          label="Masuk"
+          onPress={() => navigation.navigate('Login')}
+          style={styles.centerButton}
+          icon="log-in-outline"
+        />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text variant="heading" weight="bold" style={styles.title}>
-        Atur ulang kata sandi
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="lock-open-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="heading" weight="bold" style={styles.title}>
+          Atur ulang kata sandi
+        </Text>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -75,6 +89,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
         placeholder="Token dari email"
         autoCapitalize="none"
         editable={!submitting}
+        icon="key-outline"
       />
       <FormField
         label="Kata sandi baru (min. 8 karakter)"
@@ -84,6 +99,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
         secureTextEntry
         autoCapitalize="none"
         editable={!submitting}
+        icon="lock-closed-outline"
       />
       <FormField
         label="Konfirmasi kata sandi baru"
@@ -94,18 +110,48 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
         autoCapitalize="none"
         editable={!submitting}
         error={fieldError}
+        icon="shield-checkmark-outline"
       />
 
-      <Button label="Simpan" onPress={handleSubmit} disabled={!canSubmit} loading={submitting} />
+      <Button
+        label="Simpan"
+        onPress={handleSubmit}
+        disabled={!canSubmit}
+        loading={submitting}
+        icon="checkmark-outline"
+      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.xl },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xxl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: { marginBottom: theme.spacing.xl, color: theme.colors.primary[700] },
   errorBox: { marginBottom: theme.spacing.md },
-  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', backgroundColor: theme.colors.background.main },
+  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.main },
+  successIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#e8f0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.xl,
+  },
   centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
   centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
   centerButton: { alignSelf: 'center', minWidth: 200 },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '@/core/navigation/types';
 import { Text } from '@/ui/components/Text';
 import { EmptyState } from '@/ui/components/States';
@@ -10,7 +11,7 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'CourseDetail'>;
 
 /**
  * Course detail: backend currently exposes lesson content by lesson id, but
- * there is no course→unit→lesson listing endpoint yet (FE-03). Surface this
+ * there is no course->unit->lesson listing endpoint yet (FE-03). Surface this
  * explicitly rather than fabricating a route.
  */
 export const CourseDetailScreen: React.FC<Props> = ({ route }) => {
@@ -20,15 +21,33 @@ export const CourseDetailScreen: React.FC<Props> = ({ route }) => {
       <EmptyState
         title="Daftar pelajaran belum tersedia"
         message={`Struktur unit/pelajaran untuk kursus ${courseId} menunggu kontrak daftar konten dari server (FE-03).`}
+        icon="library-outline"
       />
-      <Text variant="caption" color="muted" style={styles.note}>
-        Materi dapat dibuka langsung melalui ID pelajaran yang dipublikasikan.
-      </Text>
+      <View style={styles.noteContainer}>
+        <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.muted} />
+        <Text variant="caption" color="muted" style={styles.note}>
+          Materi dapat dibuka langsung melalui ID pelajaran yang dipublikasikan.
+        </Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main, padding: theme.spacing.lg },
-  note: { textAlign: 'center', marginTop: theme.spacing.md },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background.main,
+    padding: theme.spacing.lg,
+  },
+  noteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  note: {
+    textAlign: 'center',
+  },
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ChatStackParamList } from '@/core/navigation/types';
 import {
   usePracticeMessages,
@@ -12,7 +13,7 @@ import { mergeMessages, MergedMessage } from '../hooks/messageReducer';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
-import { ErrorState } from '@/ui/components/States';
+import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 import { MessageBubble } from '../components/MessageBubble';
 import { MessageComposer } from '../components/MessageComposer';
@@ -46,12 +47,24 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
       keyboardVerticalOffset={90}
     >
       <View style={styles.header}>
-        <Text variant="subtitle" weight="bold" style={styles.headerTitle}>
-          {agentCode === 'elean' ? 'Elean' : 'Willy'}
-        </Text>
-        <Text variant="caption" color="secondary">
-          {isClosed ? 'Sesi selesai' : 'Sesi aktif'}
-        </Text>
+        <View style={styles.headerAvatar}>
+          <Ionicons
+            name={agentCode === 'elean' ? 'woman' : 'man'}
+            size={20}
+            color={theme.colors.text.inverse}
+          />
+        </View>
+        <View style={styles.headerInfo}>
+          <Text variant="subtitle" weight="bold" style={styles.headerTitle}>
+            {agentCode === 'elean' ? 'Elean' : 'Willy'}
+          </Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, isClosed ? styles.statusDotClosed : styles.statusDotActive]} />
+            <Text variant="caption" color="secondary">
+              {isClosed ? 'Sesi selesai' : 'Sesi aktif'}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {messages.isLoading ? (
@@ -80,15 +93,18 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
             />
           )}
           ListEmptyComponent={
-            <Text variant="body" color="secondary" style={styles.empty}>
-              Mulai percakapan dengan mengirim pesan pertama Anda.
-            </Text>
+            <EmptyState
+              title="Mulai percakapan"
+              message="Kirim pesan pertama Anda untuk memulai latihan."
+              icon="chatbubble-ellipses-outline"
+            />
           }
         />
       )}
 
       {sendError ? (
         <View style={styles.sendErrorBox}>
+          <Ionicons name="alert-circle" size={16} color={theme.colors.semantic.error} />
           <Text variant="caption" style={styles.sendErrorText}>
             {sendError}
           </Text>
@@ -103,21 +119,54 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: theme.colors.background.main },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.background.card,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
+    borderBottomColor: theme.colors.khaki[200],
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  headerInfo: {
+    flex: 1,
   },
   headerTitle: { textTransform: 'capitalize' },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusDotActive: {
+    backgroundColor: theme.colors.semantic.success,
+  },
+  statusDotClosed: {
+    backgroundColor: theme.colors.text.muted,
+  },
   center: { flex: 1, justifyContent: 'center' },
   list: { padding: theme.spacing.md, flexGrow: 1 },
-  empty: { textAlign: 'center', marginTop: theme.spacing.xl },
   sendErrorBox: {
-    backgroundColor: '#fee2e2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: '#f5e0dc',
     padding: theme.spacing.sm,
     marginHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.xs,
   },
-  sendErrorText: { color: theme.colors.semantic.error },
+  sendErrorText: { color: theme.colors.semantic.error, flex: 1 },
 });

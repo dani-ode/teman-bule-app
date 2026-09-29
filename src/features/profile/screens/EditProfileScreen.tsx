@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import { useProfile } from '@/features/account/hooks/useAccount';
 import { Text } from '@/ui/components/Text';
@@ -40,20 +41,35 @@ export const EditProfileScreen: React.FC<Props> = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="title" weight="bold" style={styles.title}>
-        Edit profil
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="person-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Edit profil
+        </Text>
+      </View>
       <Card variant="default" style={styles.card}>
         <FormField
           label="Nama tampilan"
           value={profile.data?.displayName ?? ''}
           onChangeText={() => {}}
           editable={false}
+          icon="person-outline"
         />
-        <FormField label="Email" value={profile.data?.email ?? ''} onChangeText={() => {}} editable={false} />
-        <Text variant="caption" color="secondary">
-          Pembaruan profil akan tersedia setelah endpoint PATCH profil dibuka oleh server (FE-03).
-        </Text>
+        <FormField
+          label="Email"
+          value={profile.data?.email ?? ''}
+          onChangeText={() => {}}
+          editable={false}
+          icon="mail-outline"
+        />
+        <View style={styles.noteRow}>
+          <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.muted} />
+          <Text variant="caption" color="secondary" style={styles.note}>
+            Pembaruan profil akan tersedia setelah endpoint PATCH profil dibuka oleh server (FE-03).
+          </Text>
+        </View>
       </Card>
     </ScrollView>
   );
@@ -62,6 +78,31 @@ export const EditProfileScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg },
   center: { flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    color: theme.colors.primary[700],
+  },
   card: { marginBottom: theme.spacing.md },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  note: {
+    flex: 1,
+  },
 });

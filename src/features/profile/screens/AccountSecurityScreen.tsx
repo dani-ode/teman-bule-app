@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import { useAuth } from '@/features/auth/AuthContext';
 import { getServices } from '@/core/di/ServiceContainer';
@@ -62,9 +63,14 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="title" weight="bold" style={styles.title}>
-        Keamanan akun
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="shield-checkmark-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Keamanan akun
+        </Text>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -73,10 +79,13 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
       ) : null}
 
       {deletion ? (
-        <Card variant="outlined" style={styles.card}>
-          <Text variant="subtitle" weight="bold">
-            Penghapusan dimulai
-          </Text>
+        <Card variant="accent" style={styles.card}>
+          <View style={styles.deletionHeader}>
+            <Ionicons name="warning-outline" size={24} color={theme.colors.accent[700]} />
+            <Text variant="subtitle" weight="bold" style={styles.deletionTitle}>
+              Penghapusan dimulai
+            </Text>
+          </View>
           <Text variant="body" color="secondary" style={styles.deletionBody}>
             Permintaan diterima (status: {deletion.status}). Penghapusan di seluruh penyimpanan
             berjalan bertahap; ini bukan konfirmasi bahwa semua data sudah terhapus.
@@ -88,9 +97,12 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
       ) : null}
 
       <Card variant="default" style={styles.card}>
-        <Text variant="subtitle" weight="semibold">
-          Sesi
-        </Text>
+        <View style={styles.cardHeader}>
+          <Ionicons name="log-out-outline" size={24} color={theme.colors.primary[600]} />
+          <Text variant="subtitle" weight="semibold" style={styles.cardTitle}>
+            Sesi
+          </Text>
+        </View>
         <Text variant="caption" color="secondary" style={styles.cardBody}>
           Keluar dari semua perangkat akan mencabut seluruh sesi aktif Anda.
         </Text>
@@ -104,13 +116,17 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
           variant="outline"
           disabled={busy}
           accessibilityLabel="Keluar dari semua perangkat"
+          icon="log-out-outline"
         />
       </Card>
 
       <Card variant="default" style={styles.card}>
-        <Text variant="subtitle" weight="semibold" style={styles.dangerTitle}>
-          Hapus akun
-        </Text>
+        <View style={styles.cardHeader}>
+          <Ionicons name="trash-outline" size={24} color={theme.colors.semantic.error} />
+          <Text variant="subtitle" weight="semibold" style={styles.dangerTitle}>
+            Hapus akun
+          </Text>
+        </View>
         <Text variant="caption" color="secondary" style={styles.cardBody}>
           Tindakan ini mencabut akses dan memulai penghapusan data Anda.
         </Text>
@@ -120,6 +136,7 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
           variant="outline"
           disabled={busy || deletion !== null}
           accessibilityLabel="Hapus akun saya"
+          icon="trash-outline"
         />
       </Card>
     </ScrollView>
@@ -128,10 +145,42 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg },
-  title: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    color: theme.colors.primary[700],
+  },
   errorBox: { marginBottom: theme.spacing.md },
   card: { marginBottom: theme.spacing.md },
-  cardBody: { marginVertical: theme.spacing.sm },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  cardTitle: {},
+  cardBody: { marginBottom: theme.spacing.md },
   dangerTitle: { color: theme.colors.semantic.error },
-  deletionBody: { marginVertical: theme.spacing.sm },
+  deletionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  deletionTitle: {
+    color: theme.colors.accent[700],
+  },
+  deletionBody: { marginBottom: theme.spacing.sm },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/ui/components/Text';
 import { Button } from '@/ui/components/Button';
 import { theme } from '@/ui/theme';
@@ -46,6 +47,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.container} accessibilityRole="alert">
+          <View style={styles.iconContainer}>
+            <Ionicons name="bug-outline" size={56} color={theme.colors.semantic.error} />
+          </View>
           <Text variant="title" weight="bold" style={styles.title}>
             Terjadi kesalahan
           </Text>
@@ -57,7 +61,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               {this.state.message}
             </Text>
           ) : null}
-          <Button label="Coba lagi" onPress={this.handleReset} style={styles.button} />
+          <Button label="Coba lagi" onPress={this.handleReset} style={styles.button} icon="refresh" />
         </View>
       );
     }
@@ -72,6 +76,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.xl,
     backgroundColor: theme.colors.background.main,
+  },
+  iconContainer: {
+    marginBottom: theme.spacing.lg,
   },
   title: { marginBottom: theme.spacing.sm, textAlign: 'center' },
   body: { textAlign: 'center', marginBottom: theme.spacing.md },

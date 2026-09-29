@@ -147,13 +147,13 @@ export class ApiAuthService implements IAuthService {
   public async linkGoogle(): Promise<string> {
     const data = await this.http.request({
       method: 'POST',
-      path: '/me/identities/google:link',
+      path: '/auth/google/me/identities/google:link',
       body: {},
     });
     return decode(googleStartResponseSchema, data).authorization_url;
   }
 
   public async unlinkGoogle(): Promise<void> {
-    await this.http.request({ method: 'DELETE', path: '/me/identities/google' });
+    await this.http.request({ method: 'DELETE', path: '/auth/google/me/identities/google' });
   }
 }

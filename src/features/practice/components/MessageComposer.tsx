@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet, Pressable } from 'react-native';
-import { Text } from '@/ui/components/Text';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '@/ui/theme';
 
 export interface MessageComposerProps {
@@ -22,16 +22,18 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
 
   return (
     <View style={styles.container}>
-      <TextInput
-        value={input}
-        onChangeText={setInput}
-        placeholder="Tulis pesan..."
-        placeholderTextColor={theme.colors.text.muted}
-        editable={!disabled}
-        multiline
-        accessibilityLabel="Tulis pesan"
-        style={styles.input}
-      />
+      <View style={styles.inputWrapper}>
+        <TextInput
+          value={input}
+          onChangeText={setInput}
+          placeholder="Tulis pesan..."
+          placeholderTextColor={theme.colors.text.muted}
+          editable={!disabled}
+          multiline
+          accessibilityLabel="Tulis pesan"
+          style={styles.input}
+        />
+      </View>
       <Pressable
         onPress={handleSend}
         disabled={!canSend}
@@ -45,9 +47,11 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
           pressed && canSend && styles.sendPressed,
         ]}
       >
-        <Text variant="caption" weight="bold" style={styles.sendText}>
-          Kirim
-        </Text>
+        <Ionicons
+          name="send"
+          size={20}
+          color={canSend ? theme.colors.text.inverse : theme.colors.text.muted}
+        />
       </Pressable>
     </View>
   );
@@ -56,16 +60,20 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ onSend, disabl
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.background.card,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
+    borderTopColor: theme.colors.khaki[200],
+  },
+  inputWrapper: {
+    flex: 1,
+    backgroundColor: theme.colors.khaki[100],
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.khaki[200],
   },
   input: {
-    flex: 1,
-    backgroundColor: theme.colors.neutral[100],
-    borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     fontSize: theme.typography.sizes.md,
@@ -75,13 +83,12 @@ const styles = StyleSheet.create({
   send: {
     marginLeft: theme.spacing.sm,
     backgroundColor: theme.colors.primary[600],
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    minHeight: 44,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  sendDisabled: { backgroundColor: theme.colors.neutral[300] },
+  sendDisabled: { backgroundColor: theme.colors.khaki[300] },
   sendPressed: { opacity: 0.8 },
-  sendText: { color: theme.colors.text.inverse },
 });

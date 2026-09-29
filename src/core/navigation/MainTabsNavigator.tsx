@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { MainTabsParamList } from './types';
 import {
   CallNavigator,
@@ -8,16 +9,19 @@ import {
   PodcastNavigator,
   ProfileNavigator,
 } from './stackNavigators';
-import { Text } from '@/ui/components/Text';
 import { theme } from '@/ui/theme';
 
 const Tabs = createBottomTabNavigator<MainTabsParamList>();
 
-const tabIcon = (label: string, focused: boolean) => (
-  <Text variant="caption" weight={focused ? 'bold' : 'regular'} color={focused ? 'primary' : 'secondary'}>
-    {label}
-  </Text>
-);
+type IconName = keyof typeof Ionicons.glyphMap;
+
+const iconMap: Record<string, { focused: IconName; unfocused: IconName }> = {
+  HomeTab: { focused: 'home', unfocused: 'home-outline' },
+  ChatTab: { focused: 'chatbubbles', unfocused: 'chatbubbles-outline' },
+  CallTab: { focused: 'call', unfocused: 'call-outline' },
+  PodcastTab: { focused: 'headset', unfocused: 'headset-outline' },
+  ProfileTab: { focused: 'person', unfocused: 'person-outline' },
+};
 
 /**
  * Main tabs. Tab switches do not remount active session controllers
@@ -25,36 +29,53 @@ const tabIcon = (label: string, focused: boolean) => (
  */
 export const MainTabsNavigator: React.FC = () => (
   <Tabs.Navigator
-    screenOptions={{
+    screenOptions={({ route }) => ({
       headerShown: false,
       tabBarActiveTintColor: theme.colors.primary[600],
-      tabBarInactiveTintColor: theme.colors.text.secondary,
-    }}
+      tabBarInactiveTintColor: theme.colors.text.muted,
+      tabBarStyle: {
+        backgroundColor: theme.colors.background.card,
+        borderTopColor: theme.colors.khaki[200],
+        borderTopWidth: 1,
+        paddingBottom: 4,
+        paddingTop: 4,
+        height: 60,
+      },
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: '600',
+      },
+      tabBarIcon: ({ focused, color, size }) => {
+        const icons = iconMap[route.name];
+        const iconName = focused ? icons.focused : icons.unfocused;
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+    })}
   >
     <Tabs.Screen
       name="HomeTab"
       component={HomeNavigator}
-      options={{ title: 'Beranda', tabBarIcon: ({ focused }) => tabIcon('🏠', focused), tabBarAccessibilityLabel: 'Beranda' }}
+      options={{ title: 'Beranda', tabBarAccessibilityLabel: 'Beranda' }}
     />
     <Tabs.Screen
       name="ChatTab"
       component={ChatNavigator}
-      options={{ title: 'Chat', tabBarIcon: ({ focused }) => tabIcon('💬', focused), tabBarAccessibilityLabel: 'Chat' }}
+      options={{ title: 'Chat', tabBarAccessibilityLabel: 'Chat' }}
     />
     <Tabs.Screen
       name="CallTab"
       component={CallNavigator}
-      options={{ title: 'Panggilan', tabBarIcon: ({ focused }) => tabIcon('🎙', focused), tabBarAccessibilityLabel: 'Panggilan' }}
+      options={{ title: 'Panggilan', tabBarAccessibilityLabel: 'Panggilan' }}
     />
     <Tabs.Screen
       name="PodcastTab"
       component={PodcastNavigator}
-      options={{ title: 'Podcast', tabBarIcon: ({ focused }) => tabIcon('🎧', focused), tabBarAccessibilityLabel: 'Podcast' }}
+      options={{ title: 'Podcast', tabBarAccessibilityLabel: 'Podcast' }}
     />
     <Tabs.Screen
       name="ProfileTab"
       component={ProfileNavigator}
-      options={{ title: 'Profil', tabBarIcon: ({ focused }) => tabIcon('👤', focused), tabBarAccessibilityLabel: 'Profil' }}
+      options={{ title: 'Profil', tabBarAccessibilityLabel: 'Profil' }}
     />
   </Tabs.Navigator>
 );

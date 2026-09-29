@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import { usePlan, useSelectPlan } from '@/features/account/hooks/useAccount';
 import { userMessageForError } from '@/core/errors/errorMessage';
@@ -14,14 +15,16 @@ import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'PlanSelection'>;
 
-const PLAN_INFO: Record<PlanCode, { title: string; description: string }> = {
+const PLAN_INFO: Record<PlanCode, { title: string; description: string; icon: keyof typeof Ionicons.glyphMap }> = {
   vip: {
     title: 'VIP',
     description: 'Bayar dengan token aplikasi (top-up). LLM/STT dibiayai wallet sesuai tarif.',
+    icon: 'diamond-outline',
   },
   advance: {
     title: 'Advance',
     description: 'Gunakan API key Anda sendiri (BYOK) untuk LLM dan STT. TTS & embedding oleh platform.',
+    icon: 'key-outline',
   },
 };
 
@@ -52,13 +55,18 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="title" weight="bold" style={styles.title}>
-        Pilih plan
-      </Text>
-      <Text variant="body" color="secondary" style={styles.subtitle}>
-        Plan menentukan cara pembiayaan pekerjaan AI. Mengganti plan tidak menghapus saldo atau
-        progres Anda.
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="diamond-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Pilih plan
+        </Text>
+        <Text variant="body" color="secondary" style={styles.subtitle}>
+          Plan menentukan cara pembiayaan pekerjaan AI. Mengganti plan tidak menghapus saldo atau
+          progres Anda.
+        </Text>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -80,6 +88,16 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
             style={styles.planCard}
           >
             <View style={styles.planRow}>
+              <View style={[
+                styles.planIconContainer,
+                plan.data?.planCode === code && styles.planIconActive,
+              ]}>
+                <Ionicons
+                  name={PLAN_INFO[code].icon}
+                  size={24}
+                  color={plan.data?.planCode === code ? theme.colors.text.inverse : theme.colors.primary[600]}
+                />
+              </View>
               <View style={styles.planBody}>
                 <Text variant="subtitle" weight="bold">
                   {PLAN_INFO[code].title}
@@ -95,9 +113,12 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
       ))}
 
       {selectPlan.isPending ? (
-        <Text variant="caption" color="secondary" style={styles.saving}>
-          Menyimpan pilihan...
-        </Text>
+        <View style={styles.savingRow}>
+          <LoadingSpinner size="small" />
+          <Text variant="caption" color="secondary" style={styles.saving}>
+            Menyimpan pilihan...
+          </Text>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -106,11 +127,49 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg },
   center: { flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.xs },
-  subtitle: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.primary[700],
+  },
+  subtitle: {
+    textAlign: 'center',
+  },
   errorBox: { marginBottom: theme.spacing.md },
   planCard: { marginBottom: theme.spacing.md },
-  planRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  planRow: { flexDirection: 'row', alignItems: 'center' },
+  planIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  planIconActive: {
+    backgroundColor: theme.colors.primary[600],
+  },
   planBody: { flex: 1, marginRight: theme.spacing.sm },
-  saving: { textAlign: 'center', marginTop: theme.spacing.sm },
+  savingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  saving: {},
 });

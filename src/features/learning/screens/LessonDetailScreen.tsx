@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '@/core/navigation/types';
 import { useLesson, useRecordProgress } from '../hooks/useLearning';
 import { Text } from '@/ui/components/Text';
@@ -54,6 +55,13 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
         <Badge label={lesson.data.contentType} variant="primary" />
       </View>
       <Card variant="elevated" style={styles.card}>
+        <View style={styles.contentHeader}>
+          <Ionicons name="document-text-outline" size={24} color={theme.colors.primary[600]} />
+          <Text variant="subtitle" weight="bold" style={styles.contentTitle}>
+            Materi Pelajaran
+          </Text>
+        </View>
+        <View style={styles.divider} />
         <Text variant="body" style={styles.body}>
           {lesson.data.body}
         </Text>
@@ -63,11 +71,16 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
         onPress={handleMarkCompleted}
         loading={recordProgress.isPending}
         disabled={recordProgress.isPending || recordProgress.isSuccess}
+        icon={recordProgress.isSuccess ? 'checkmark-circle' : 'checkmark-outline'}
+        variant={recordProgress.isSuccess ? 'secondary' : 'primary'}
       />
       {recordProgress.isSuccess ? (
-        <Text variant="caption" color="secondary" style={styles.success}>
-          Progres tersimpan.
-        </Text>
+        <View style={styles.successRow}>
+          <Ionicons name="checkmark-circle" size={16} color={theme.colors.semantic.success} />
+          <Text variant="caption" color="secondary" style={styles.success}>
+            Progres tersimpan.
+          </Text>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -78,6 +91,29 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
   headerRow: { flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.md },
   card: { marginBottom: theme.spacing.lg },
+  contentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  contentTitle: {
+    color: theme.colors.primary[700],
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.khaki[200],
+    marginBottom: theme.spacing.md,
+  },
   body: { lineHeight: 24 },
-  success: { marginTop: theme.spacing.sm, textAlign: 'center' },
+  successRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+  },
+  success: {
+    textAlign: 'center',
+  },
 });

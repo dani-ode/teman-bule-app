@@ -7,6 +7,7 @@ import {
   PodcastStackParamList,
   ProfileStackParamList,
 } from './types';
+import { theme } from '@/ui/theme';
 
 import { HomeScreen } from '@/features/learning/screens/HomeScreen';
 import { CourseDetailScreen } from '@/features/learning/screens/CourseDetailScreen';
@@ -32,9 +33,24 @@ import { VocabularyScreen } from '@/features/vocabulary/screens/VocabularyScreen
 import { ToeflScreen } from '@/features/toefl/screens/ToeflScreen';
 import { AccountSecurityScreen } from '@/features/profile/screens/AccountSecurityScreen';
 
+const screenOptions = {
+  headerStyle: {
+    backgroundColor: theme.colors.background.main,
+  },
+  headerTintColor: theme.colors.text.primary,
+  headerTitleStyle: {
+    fontWeight: '600' as const,
+    fontSize: theme.typography.sizes.lg,
+  },
+  headerShadowVisible: false,
+  contentStyle: {
+    backgroundColor: theme.colors.background.main,
+  },
+};
+
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 export const HomeNavigator: React.FC = () => (
-  <HomeStack.Navigator>
+  <HomeStack.Navigator screenOptions={screenOptions}>
     <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ title: 'Beranda' }} />
     <HomeStack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ title: 'Kursus' }} />
     <HomeStack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ title: 'Materi' }} />
@@ -43,7 +59,7 @@ export const HomeNavigator: React.FC = () => (
 
 const ChatStack = createNativeStackNavigator<ChatStackParamList>();
 export const ChatNavigator: React.FC = () => (
-  <ChatStack.Navigator>
+  <ChatStack.Navigator screenOptions={screenOptions}>
     <ChatStack.Screen name="ChatHome" component={ChatHomeScreen} options={{ title: 'Chat' }} />
     <ChatStack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Percakapan' }} />
   </ChatStack.Navigator>
@@ -51,14 +67,14 @@ export const ChatNavigator: React.FC = () => (
 
 const CallStack = createNativeStackNavigator<CallStackParamList>();
 export const CallNavigator: React.FC = () => (
-  <CallStack.Navigator>
+  <CallStack.Navigator screenOptions={screenOptions}>
     <CallStack.Screen name="CallSetup" component={CallSetupScreen} options={{ title: 'Panggilan' }} />
   </CallStack.Navigator>
 );
 
 const PodcastStack = createNativeStackNavigator<PodcastStackParamList>();
 export const PodcastNavigator: React.FC = () => (
-  <PodcastStack.Navigator>
+  <PodcastStack.Navigator screenOptions={screenOptions}>
     <PodcastStack.Screen name="PodcastLibrary" component={PodcastLibraryScreen} options={{ title: 'Podcast' }} />
     <PodcastStack.Screen name="PodcastCreate" component={PodcastCreateScreen} options={{ title: 'Podcast Baru' }} />
     <PodcastStack.Screen name="PodcastDetail" component={PodcastDetailScreen} options={{ title: 'Detail Podcast' }} />
@@ -67,7 +83,7 @@ export const PodcastNavigator: React.FC = () => (
 
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 export const ProfileNavigator: React.FC = () => (
-  <ProfileStack.Navigator>
+  <ProfileStack.Navigator screenOptions={screenOptions}>
     <ProfileStack.Screen name="ProfileMain" component={ProfileMainScreen} options={{ title: 'Profil' }} />
     <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profil' }} />
     <ProfileStack.Screen name="PlanSelection" component={PlanSelectionScreen} options={{ title: 'Plan' }} />

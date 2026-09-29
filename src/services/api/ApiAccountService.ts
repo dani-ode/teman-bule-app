@@ -119,7 +119,7 @@ export class ApiAccountService implements IAccountService {
       selectModelResponseSchema,
       await this.http.request({
         method: 'PUT',
-        path: '/me/ai-credentials/selections',
+        path: '/me/ai-selections',
         body: {
           capability: input.capability,
           credential_id: input.credentialId,

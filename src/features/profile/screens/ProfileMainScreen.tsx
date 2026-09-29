@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import { useProfile, usePlan, useWallet } from '@/features/account/hooks/useAccount';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -16,6 +17,7 @@ interface MenuItem {
   readonly key: string;
   readonly label: string;
   readonly description: string;
+  readonly icon: keyof typeof Ionicons.glyphMap;
   readonly onPress: () => void;
 }
 
@@ -30,77 +32,91 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
       key: 'edit',
       label: 'Edit profil',
       description: 'Nama tampilan dan preferensi',
+      icon: 'person-outline',
       onPress: () => navigation.navigate('EditProfile'),
     },
     {
       key: 'plan',
       label: 'Plan',
       description: 'VIP atau Advance (BYOK)',
+      icon: 'diamond-outline',
       onPress: () => navigation.navigate('PlanSelection'),
     },
     {
       key: 'wallet',
       label: 'Wallet',
       description: 'Saldo token dan riwayat',
+      icon: 'wallet-outline',
       onPress: () => navigation.navigate('Wallet'),
     },
     {
       key: 'ai',
       label: 'Pengaturan AI',
       description: 'Kredensial BYOK dan pilihan model',
+      icon: 'hardware-chip-outline',
       onPress: () => navigation.navigate('AiSettings'),
     },
     {
       key: 'vocab',
       label: 'Vocabulary',
       description: 'Kata tersimpan dan review',
+      icon: 'book-outline',
       onPress: () => navigation.navigate('Vocabulary'),
     },
     {
       key: 'toefl',
       label: 'TOEFL',
       description: 'Simulasi dan riwayat attempt',
+      icon: 'school-outline',
       onPress: () => navigation.navigate('Toefl'),
     },
     {
       key: 'security',
       label: 'Keamanan akun',
       description: 'Sesi, logout, hapus akun',
+      icon: 'shield-checkmark-outline',
       onPress: () => navigation.navigate('AccountSecurity'),
     },
   ];
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
+      {/* Profile Header */}
+      <Card variant="elevated" style={styles.profileCard}>
         {profile.isLoading ? (
-          <LoadingSpinner />
+          <LoadingSpinner size="small" />
         ) : (
-          <>
-            <Text variant="title" weight="bold">
-              {profile.data?.displayName ?? 'Pelajar'}
-            </Text>
-            <Text variant="body" color="secondary">
-              {profile.data?.email}
-            </Text>
-            <View style={styles.badgeRow}>
-              {plan.data ? (
-                <Badge label={`Plan ${plan.data.planCode.toUpperCase()}`} variant="primary" />
-              ) : (
-                <Badge label="Plan belum dipilih" variant="warning" />
-              )}
-              {wallet.data ? (
-                <Badge
-                  label={`${wallet.data.availableUnits} token`}
-                  variant="success"
-                  style={styles.badgeSpacer}
-                />
-              ) : null}
+          <View style={styles.profileRow}>
+            <View style={styles.avatarCircle}>
+              <Ionicons name="person" size={28} color={theme.colors.primary[600]} />
             </View>
-          </>
+            <View style={styles.profileInfo}>
+              <Text variant="title" weight="bold">
+                {profile.data?.displayName ?? 'Pelajar'}
+              </Text>
+              <Text variant="body" color="secondary">
+                {profile.data?.email}
+              </Text>
+              <View style={styles.badgeRow}>
+                {plan.data ? (
+                  <Badge label={`Plan ${plan.data.planCode.toUpperCase()}`} variant="primary" />
+                ) : (
+                  <Badge label="Plan belum dipilih" variant="warning" />
+                )}
+                {wallet.data ? (
+                  <Badge
+                    label={`${wallet.data.availableUnits} token`}
+                    variant="success"
+                    style={styles.badgeSpacer}
+                  />
+                ) : null}
+              </View>
+            </View>
+          </View>
         )}
-      </View>
+      </Card>
 
+      {/* Menu Items */}
       {menu.map((item) => (
         <Pressable
           key={item.key}
@@ -110,6 +126,9 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Card variant="default" style={styles.menuCard}>
             <View style={styles.menuRow}>
+              <View style={styles.menuIconContainer}>
+                <Ionicons name={item.icon} size={22} color={theme.colors.primary[600]} />
+              </View>
               <View style={styles.menuBody}>
                 <Text variant="subtitle" weight="semibold">
                   {item.label}
@@ -118,19 +137,25 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
                   {item.description}
                 </Text>
               </View>
-              <Text variant="title" color="muted">
-                ›
-              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={theme.colors.text.muted}
+              />
             </View>
           </Card>
         </Pressable>
       ))}
 
+      {/* Logout */}
       <Pressable onPress={() => void logout()} accessibilityRole="button" accessibilityLabel="Keluar">
         <Card variant="default" style={styles.logoutCard}>
-          <Text variant="subtitle" weight="semibold" style={styles.logoutText}>
-            Keluar
-          </Text>
+          <View style={styles.logoutRow}>
+            <Ionicons name="log-out-outline" size={22} color={theme.colors.semantic.error} />
+            <Text variant="subtitle" weight="semibold" style={styles.logoutText}>
+              Keluar
+            </Text>
+          </View>
         </Card>
       </Pressable>
     </ScrollView>
@@ -139,12 +164,50 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg },
-  header: { marginBottom: theme.spacing.lg },
+  profileCard: { marginBottom: theme.spacing.lg },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.lg,
+  },
+  profileInfo: {
+    flex: 1,
+  },
   badgeRow: { flexDirection: 'row', marginTop: theme.spacing.sm },
   badgeSpacer: { marginLeft: theme.spacing.sm },
   menuCard: { marginBottom: theme.spacing.sm },
-  menuRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
   menuBody: { flex: 1 },
-  logoutCard: { marginTop: theme.spacing.lg, alignItems: 'center' },
+  logoutCard: {
+    marginTop: theme.spacing.lg,
+    borderColor: '#f5e0dc',
+    borderWidth: 1,
+  },
+  logoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+  },
   logoutText: { color: theme.colors.semantic.error },
 });

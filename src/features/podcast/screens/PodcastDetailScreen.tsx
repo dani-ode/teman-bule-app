@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import { StyleSheet, ScrollView, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { PodcastStackParamList } from '@/core/navigation/types';
 import { Text } from '@/ui/components/Text';
 import { UnavailableState } from '@/ui/components/States';
@@ -18,12 +19,20 @@ export const PodcastDetailScreen: React.FC<Props> = ({ route }) => {
   const { podcastId } = route.params;
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="title" weight="bold" style={styles.title}>
-        Podcast
-      </Text>
-      <Text variant="caption" color="muted" style={styles.id}>
-        ID: {podcastId}
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="headset-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Podcast
+        </Text>
+        <View style={styles.idRow}>
+          <Ionicons name="finger-print-outline" size={14} color={theme.colors.text.muted} />
+          <Text variant="caption" color="muted" style={styles.id}>
+            ID: {podcastId}
+          </Text>
+        </View>
+      </View>
       <UnavailableState
         feature="Unggah sumber & pemutaran"
         message="Unggah PDF menunggu adapter penyimpanan media (DEC-15) dan pemutaran menunggu realtime (DEC-14). Metadata podcast sudah tersimpan di server."
@@ -34,6 +43,28 @@ export const PodcastDetailScreen: React.FC<Props> = ({ route }) => {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, flexGrow: 1, backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.xs },
-  id: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.primary[700],
+  },
+  idRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  id: {},
 });

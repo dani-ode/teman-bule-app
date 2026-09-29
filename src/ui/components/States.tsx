@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { Button } from './Button';
 import { theme } from '../theme';
@@ -20,6 +21,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   retryLabel = 'Coba lagi',
 }) => (
   <View style={styles.container} accessibilityRole="alert">
+    <View style={styles.iconContainer}>
+      <Ionicons name="alert-circle-outline" size={48} color={theme.colors.semantic.error} />
+    </View>
     <Text variant="subtitle" weight="bold" style={styles.title}>
       {title}
     </Text>
@@ -32,7 +36,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       </Text>
     ) : null}
     {onRetry ? (
-      <Button label={retryLabel} onPress={onRetry} variant="secondary" style={styles.button} />
+      <Button label={retryLabel} onPress={onRetry} variant="secondary" style={styles.button} icon="refresh" />
     ) : null}
   </View>
 );
@@ -40,12 +44,22 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 export interface EmptyStateProps {
   readonly title: string;
   readonly message?: string;
+  readonly icon?: keyof typeof Ionicons.glyphMap;
   readonly actionLabel?: string;
   readonly onAction?: () => void;
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ title, message, actionLabel, onAction }) => (
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  title,
+  message,
+  icon = 'file-tray-outline',
+  actionLabel,
+  onAction,
+}) => (
   <View style={styles.container}>
+    <View style={styles.iconContainer}>
+      <Ionicons name={icon} size={48} color={theme.colors.text.muted} />
+    </View>
     <Text variant="subtitle" weight="bold" style={styles.title}>
       {title}
     </Text>
@@ -68,6 +82,9 @@ export interface UnavailableStateProps {
 /** Explicit feature-unavailable state; never a silent mock/fallback (R01/R03). */
 export const UnavailableState: React.FC<UnavailableStateProps> = ({ feature, message }) => (
   <View style={styles.container}>
+    <View style={styles.iconContainer}>
+      <Ionicons name="construct-outline" size={48} color={theme.colors.accent[500]} />
+    </View>
     <Text variant="subtitle" weight="bold" style={styles.title}>
       {feature} belum tersedia
     </Text>
@@ -82,6 +99,9 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     padding: theme.spacing.xl,
+  },
+  iconContainer: {
+    marginBottom: theme.spacing.lg,
   },
   title: {
     textAlign: 'center',

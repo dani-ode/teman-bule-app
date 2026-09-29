@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import {
   useVocabulary,
@@ -18,6 +19,13 @@ import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Vocabulary'>;
+
+const reviewColors: Record<string, string> = {
+  again: theme.colors.semantic.error,
+  hard: theme.colors.accent[600],
+  good: theme.colors.primary[600],
+  easy: theme.colors.semantic.success,
+};
 
 export const VocabularyScreen: React.FC<Props> = () => {
   const vocabulary = useVocabulary();
@@ -45,25 +53,47 @@ export const VocabularyScreen: React.FC<Props> = () => {
 
   return (
     <View style={styles.container}>
+      {/* Save Form */}
       <View style={styles.form}>
-        <Text variant="subtitle" weight="bold" style={styles.formTitle}>
-          Simpan kata
-        </Text>
-        <FormField label="Kata" value={lemma} onChangeText={setLemma} placeholder="Lemma (Inggris)" autoCapitalize="none" />
-        <FormField label="Definisi (opsional)" value={definition} onChangeText={setDefinition} placeholder="Definisi singkat" />
-        {formError ? (
-          <Text variant="caption" style={styles.formError}>
-            {formError}
+        <View style={styles.formHeader}>
+          <Ionicons name="bookmark-outline" size={20} color={theme.colors.primary[600]} />
+          <Text variant="subtitle" weight="bold" style={styles.formTitle}>
+            Simpan kata baru
           </Text>
+        </View>
+        <FormField
+          label="Kata"
+          value={lemma}
+          onChangeText={setLemma}
+          placeholder="Lemma (Inggris)"
+          autoCapitalize="none"
+          icon="text-outline"
+        />
+        <FormField
+          label="Definisi (opsional)"
+          value={definition}
+          onChangeText={setDefinition}
+          placeholder="Definisi singkat"
+          icon="document-text-outline"
+        />
+        {formError ? (
+          <View style={styles.formErrorRow}>
+            <Ionicons name="alert-circle" size={14} color={theme.colors.semantic.error} />
+            <Text variant="caption" style={styles.formError}>
+              {formError}
+            </Text>
+          </View>
         ) : null}
         <Button
           label="Simpan"
           onPress={handleSave}
           disabled={lemma.trim().length === 0 || saveEntry.isPending}
           loading={saveEntry.isPending}
+          icon="save-outline"
         />
       </View>
 
+      {/* Vocabulary List */}
       {vocabulary.isLoading ? (
         <LoadingSpinner message="Memuat vocabulary..." />
       ) : vocabulary.isError ? (
@@ -73,7 +103,11 @@ export const VocabularyScreen: React.FC<Props> = () => {
           onRetry={() => vocabulary.refetch()}
         />
       ) : (vocabulary.data ?? []).length === 0 ? (
-        <EmptyState title="Belum ada kata" message="Kata yang Anda simpan akan tampil di sini." />
+        <EmptyState
+          title="Belum ada kata"
+          message="Kata yang Anda simpan akan tampil di sini."
+          icon="book-outline"
+        />
       ) : (
         <FlatList
           data={vocabulary.data ?? []}
@@ -82,6 +116,9 @@ export const VocabularyScreen: React.FC<Props> = () => {
           renderItem={({ item }) => (
             <Card variant="default" style={styles.card}>
               <View style={styles.cardRow}>
+                <View style={styles.cardIcon}>
+                  <Ionicons name="book" size={20} color={theme.colors.primary[600]} />
+                </View>
                 <View style={styles.cardBody}>
                   <Text variant="subtitle" weight="bold">
                     {item.lemma}
@@ -99,16 +136,25 @@ export const VocabularyScreen: React.FC<Props> = () => {
               </View>
               <View style={styles.reviewRow}>
                 {(['again', 'hard', 'good', 'easy'] as const).map((r) => (
-                  <Button
+                  <Pressable
                     key={r}
-                    label={r}
-                    variant="outline"
                     onPress={() => recordReview.mutate({ entryId: item.entryId, result: r })}
                     disabled={recordReview.isPending}
-                    style={styles.reviewButton}
-                    labelStyle={styles.reviewLabel}
+                    accessibilityRole="button"
                     accessibilityLabel={`Review ${r} untuk ${item.lemma}`}
-                  />
+                    style={[
+                      styles.reviewButton,
+                      { borderColor: reviewColors[r] },
+                    ]}
+                  >
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      style={[styles.reviewLabel, { color: reviewColors[r] }]}
+                    >
+                      {r}
+                    </Text>
+                  </Pressable>
                 ))}
               </View>
             </Card>
@@ -122,15 +168,44 @@ export const VocabularyScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background.main },
   form: { padding: theme.spacing.lg, paddingBottom: theme.spacing.sm },
-  formTitle: { marginBottom: theme.spacing.md },
-  formError: { color: theme.colors.semantic.error, marginBottom: theme.spacing.sm },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  formTitle: {
+    color: theme.colors.primary[700],
+  },
+  formErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+  },
+  formError: { color: theme.colors.semantic.error },
   list: { padding: theme.spacing.lg, paddingTop: 0 },
   card: { marginBottom: theme.spacing.md },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  cardRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  cardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
   cardBody: { flex: 1 },
   badgeRow: { flexDirection: 'row', marginTop: theme.spacing.sm },
   badgeSpacer: { marginLeft: theme.spacing.sm },
   reviewRow: { flexDirection: 'row', gap: theme.spacing.xs, marginTop: theme.spacing.md },
-  reviewButton: { flex: 1, paddingHorizontal: theme.spacing.xs },
-  reviewLabel: { fontSize: theme.typography.sizes.xs, textTransform: 'capitalize' },
+  reviewButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  reviewLabel: { textTransform: 'capitalize' },
 });

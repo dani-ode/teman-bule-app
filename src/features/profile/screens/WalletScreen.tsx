@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import { useWallet } from '@/features/account/hooks/useAccount';
 import { isClientError } from '@/core/errors/ClientError';
@@ -8,7 +9,7 @@ import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
 import { Card } from '@/ui/components/Card';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
-import { ErrorState } from '@/ui/components/States';
+import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Wallet'>;
@@ -29,13 +30,11 @@ export const WalletScreen: React.FC<Props> = () => {
     if (isClientError(wallet.error) && wallet.error.kind === 'not_found') {
       return (
         <View style={styles.center}>
-          <Text variant="subtitle" weight="bold" style={styles.emptyTitle}>
-            Wallet belum ada
-          </Text>
-          <Text variant="body" color="secondary" style={styles.emptyBody}>
-            Lakukan top-up pertama untuk mengisi saldo token. Top-up dibuka setelah gateway
-            pembayaran dikonfigurasi di server.
-          </Text>
+          <EmptyState
+            title="Wallet belum ada"
+            message="Lakukan top-up pertama untuk mengisi saldo token. Top-up dibuka setelah gateway pembayaran dikonfigurasi di server."
+            icon="wallet-outline"
+          />
         </View>
       );
     }
@@ -49,13 +48,21 @@ export const WalletScreen: React.FC<Props> = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="title" weight="bold" style={styles.title}>
-        Wallet
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="wallet-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Wallet
+        </Text>
+      </View>
 
       <Card variant="elevated" style={styles.card}>
         <View style={styles.row}>
           <View style={styles.item}>
+            <View style={styles.itemIconContainer}>
+              <Ionicons name="logo-bitcoin" size={24} color={theme.colors.primary[600]} />
+            </View>
             <Text variant="heading" weight="bold" color="primary">
               {wallet.data?.availableUnits ?? 0}
             </Text>
@@ -63,7 +70,11 @@ export const WalletScreen: React.FC<Props> = () => {
               Token tersedia
             </Text>
           </View>
+          <View style={styles.divider} />
           <View style={styles.item}>
+            <View style={styles.itemIconContainer}>
+              <Ionicons name="lock-closed-outline" size={24} color={theme.colors.accent[600]} />
+            </View>
             <Text variant="heading" weight="bold" color="secondary">
               {wallet.data?.heldUnits ?? 0}
             </Text>
@@ -72,15 +83,21 @@ export const WalletScreen: React.FC<Props> = () => {
             </Text>
           </View>
         </View>
-        <Text variant="caption" color="muted" style={styles.asset}>
-          Aset: {wallet.data?.asset}
-        </Text>
+        <View style={styles.assetRow}>
+          <Ionicons name="information-circle-outline" size={14} color={theme.colors.text.muted} />
+          <Text variant="caption" color="muted" style={styles.asset}>
+            Aset: {wallet.data?.asset}
+          </Text>
+        </View>
       </Card>
 
-      <Text variant="caption" color="secondary" style={styles.note}>
-        Saldo final ditentukan server. Token yang tertahan adalah reservasi untuk pekerjaan yang
-        sedang berjalan.
-      </Text>
+      <View style={styles.noteRow}>
+        <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.text.muted} />
+        <Text variant="caption" color="secondary" style={styles.note}>
+          Saldo final ditentukan server. Token yang tertahan adalah reservasi untuk pekerjaan yang
+          sedang berjalan.
+        </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -88,12 +105,53 @@ export const WalletScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.xl, backgroundColor: theme.colors.background.main },
-  title: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    color: theme.colors.primary[700],
+  },
   card: { marginBottom: theme.spacing.md },
   row: { flexDirection: 'row', justifyContent: 'space-around' },
-  item: { alignItems: 'center' },
-  asset: { marginTop: theme.spacing.md, textAlign: 'center' },
-  note: { textAlign: 'center' },
-  emptyTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  emptyBody: { textAlign: 'center' },
+  item: { alignItems: 'center', flex: 1 },
+  itemIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  divider: {
+    width: 1,
+    backgroundColor: theme.colors.khaki[200],
+  },
+  assetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.md,
+  },
+  asset: {},
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+  },
+  note: {
+    flex: 1,
+  },
 });

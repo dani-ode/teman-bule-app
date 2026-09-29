@@ -4,38 +4,37 @@
     "jsx": "react-native",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@/config/*": [
-        "src/config/*"
+        "./src/config/*"
       ],
       "@/core/*": [
-        "src/core/*"
+        "./src/core/*"
       ],
       "@/domain/*": [
-        "src/domain/*"
+        "./src/domain/*"
       ],
       "@/services/*": [
-        "src/services/*"
+        "./src/services/*"
       ],
       "@/features/*": [
-        "src/features/*"
+        "./src/features/*"
       ],
       "@/ui/*": [
-        "src/ui/*"
+        "./src/ui/*"
       ],
       "@/data/*": [
-        "src/data/*"
+        "./src/data/*"
       ]
     }
   },

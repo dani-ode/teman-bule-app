@@ -3,7 +3,7 @@ import { View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { theme } from '../theme';
 import { Text } from './Text';
 
-export type BadgeVariant = 'primary' | 'success' | 'warning' | 'neutral';
+export type BadgeVariant = 'primary' | 'success' | 'warning' | 'neutral' | 'accent';
 
 export interface BadgeProps {
   label: string;
@@ -27,16 +27,18 @@ export const Badge: React.FC<BadgeProps> = ({
 
 const badgeVariantStyles: Record<BadgeVariant, ViewStyle> = {
   primary: { backgroundColor: theme.colors.primary[100] },
-  success: { backgroundColor: '#dcfce7' },
-  warning: { backgroundColor: '#fef3c7' },
-  neutral: { backgroundColor: theme.colors.neutral[200] },
+  success: { backgroundColor: '#e8f0e0' },
+  warning: { backgroundColor: theme.colors.accent[100] },
+  neutral: { backgroundColor: theme.colors.khaki[200] },
+  accent: { backgroundColor: theme.colors.accent[100] },
 };
 
 const badgeTextStyles: Record<BadgeVariant, TextStyle> = {
   primary: { color: theme.colors.primary[700] },
-  success: { color: '#15803d' },
-  warning: { color: '#b45309' },
-  neutral: { color: theme.colors.neutral[800] },
+  success: { color: theme.colors.semantic.success },
+  warning: { color: theme.colors.accent[700] },
+  neutral: { color: theme.colors.neutral[700] },
+  accent: { color: theme.colors.accent[700] },
 };
 
 const styles = StyleSheet.create({

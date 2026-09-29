@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '@/core/navigation/types';
 import { useCourses } from '../hooks/useLearning';
 import { useProfile } from '@/features/account/hooks/useAccount';
@@ -14,21 +15,37 @@ import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeMain'>;
 
+const levelColors: Record<string, 'primary' | 'accent' | 'success'> = {
+  beginner: 'primary',
+  elementary: 'primary',
+  intermediate: 'accent',
+  advanced: 'success',
+};
+
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const profile = useProfile();
   const courses = useCourses();
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text variant="caption" color="secondary">
-          Selamat datang
-        </Text>
-        <Text variant="title" weight="bold">
-          {profile.data?.displayName ?? 'Pelajar'}
-        </Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text variant="caption" color="secondary">
+              Selamat datang kembali
+            </Text>
+            <Text variant="title" weight="bold">
+              {profile.data?.displayName ?? 'Pelajar'}
+            </Text>
+          </View>
+          <View style={styles.avatarCircle}>
+            <Ionicons name="person" size={24} color={theme.colors.primary[600]} />
+          </View>
+        </View>
       </View>
 
+      {/* Content */}
       {courses.isLoading ? (
         <LoadingSpinner message="Memuat kursus..." />
       ) : courses.isError ? (
@@ -41,34 +58,57 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <EmptyState
           title="Belum ada kursus"
           message="Kursus yang dipublikasikan akan tampil di sini."
+          icon="book-outline"
         />
       ) : (
-        <FlatList
-          data={courses.data ?? []}
-          keyExtractor={(item) => item.courseId}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => navigation.navigate('CourseDetail', { courseId: item.courseId })}
-              accessibilityRole="button"
-              accessibilityLabel={`Buka kursus ${item.title}`}
-            >
-              <Card variant="elevated" style={styles.card}>
-                <View style={styles.cardRow}>
-                  <View style={styles.cardBody}>
-                    <Text variant="subtitle" weight="bold">
-                      {item.title}
-                    </Text>
-                    <Text variant="caption" color="secondary">
-                      {item.slug}
-                    </Text>
+        <>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="book" size={20} color={theme.colors.primary[600]} />
+            <Text variant="subtitle" weight="bold" style={styles.sectionTitle}>
+              Kursus Tersedia
+            </Text>
+          </View>
+          <FlatList
+            data={courses.data ?? []}
+            keyExtractor={(item) => item.courseId}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => navigation.navigate('CourseDetail', { courseId: item.courseId })}
+                accessibilityRole="button"
+                accessibilityLabel={`Buka kursus ${item.title}`}
+              >
+                <Card variant="elevated" style={styles.card}>
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardIconContainer}>
+                      <Ionicons name="book-outline" size={28} color={theme.colors.primary[600]} />
+                    </View>
+                    <View style={styles.cardBody}>
+                      <Text variant="subtitle" weight="bold">
+                        {item.title}
+                      </Text>
+                      <Text variant="caption" color="secondary" numberOfLines={1}>
+                        {item.slug}
+                      </Text>
+                    </View>
+                    <View style={styles.cardRight}>
+                      <Badge
+                        label={item.level}
+                        variant={levelColors[item.level.toLowerCase()] ?? 'primary'}
+                      />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color={theme.colors.text.muted}
+                        style={styles.chevron}
+                      />
+                    </View>
                   </View>
-                  <Badge label={item.level} variant="primary" />
-                </View>
-              </Card>
-            </Pressable>
-          )}
-        />
+                </Card>
+              </Pressable>
+            )}
+          />
+        </>
       )}
     </View>
   );
@@ -76,9 +116,56 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background.main },
-  header: { padding: theme.spacing.lg },
+  header: {
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  sectionTitle: {
+    color: theme.colors.primary[700],
+  },
   list: { padding: theme.spacing.lg, paddingTop: 0 },
   card: { marginBottom: theme.spacing.md },
-  cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardBody: { flex: 1, marginRight: theme.spacing.sm },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  cardBody: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
+  cardRight: {
+    alignItems: 'flex-end',
+  },
+  chevron: {
+    marginTop: theme.spacing.xs,
+  },
 });

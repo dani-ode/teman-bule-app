@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
 import {
   useStartToeflAttempt,
@@ -42,6 +43,13 @@ export const ToeflScreen: React.FC<Props> = () => {
   const submitAttempt = useSubmitToeflAttempt();
   const evaluated = attempt.data?.state === 'evaluated';
   const score = useToeflScore(attemptId, evaluated);
+
+  const sectionIcons: Record<ToeflSection, keyof typeof Ionicons.glyphMap> = {
+    reading: 'book-outline',
+    listening: 'headset-outline',
+    speaking: 'mic-outline',
+    writing: 'create-outline',
+  };
 
   const guard = (err: unknown): boolean => {
     if (isClientError(err) && err.kind === 'unavailable') {
@@ -97,19 +105,33 @@ export const ToeflScreen: React.FC<Props> = () => {
           feature="TOEFL"
           message="Fitur TOEFL belum diaktifkan pada server."
         />
-        <Button label="Kembali" onPress={() => setUnavailable(false)} variant="secondary" style={styles.backButton} />
+        <Button
+          label="Kembali"
+          onPress={() => setUnavailable(false)}
+          variant="secondary"
+          style={styles.backButton}
+          icon="arrow-back-outline"
+        />
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text variant="title" weight="bold" style={styles.title}>
-        Simulasi TOEFL
-      </Text>
-      <Text variant="caption" color="secondary" style={styles.disclaimer}>
-        Ini simulasi latihan, bukan skor TOEFL resmi.
-      </Text>
+      <View style={styles.headerSection}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="school-outline" size={36} color={theme.colors.text.inverse} />
+        </View>
+        <Text variant="title" weight="bold" style={styles.title}>
+          Simulasi TOEFL
+        </Text>
+        <View style={styles.disclaimerRow}>
+          <Ionicons name="warning-outline" size={14} color={theme.colors.accent[600]} />
+          <Text variant="caption" color="secondary" style={styles.disclaimer}>
+            Ini simulasi latihan, bukan skor TOEFL resmi.
+          </Text>
+        </View>
+      </View>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -125,21 +147,27 @@ export const ToeflScreen: React.FC<Props> = () => {
             onChangeText={setTestVersionId}
             placeholder="ID versi tes yang dipublikasikan"
             autoCapitalize="none"
+            icon="document-outline"
           />
           <Button
             label="Mulai attempt"
             onPress={handleStart}
             disabled={testVersionId.trim().length === 0 || startAttempt.isPending}
             loading={startAttempt.isPending}
+            icon="play-outline"
+            size="lg"
           />
         </Card>
       ) : (
         <>
           <Card variant="outlined" style={styles.card}>
             <View style={styles.attemptRow}>
-              <Text variant="subtitle" weight="bold">
-                Attempt aktif
-              </Text>
+              <View style={styles.attemptInfo}>
+                <Ionicons name="flag-outline" size={20} color={theme.colors.primary[600]} />
+                <Text variant="subtitle" weight="bold" style={styles.attemptTitle}>
+                  Attempt aktif
+                </Text>
+              </View>
               <Badge label={attempt.data?.state ?? '...'} variant="primary" />
             </View>
             <Text variant="caption" color="muted">
@@ -149,30 +177,65 @@ export const ToeflScreen: React.FC<Props> = () => {
 
           {!evaluated ? (
             <Card variant="default" style={styles.card}>
-              <Text variant="subtitle" weight="semibold" style={styles.sectionTitle}>
-                Jawaban
-              </Text>
-              <FormField label="Referensi soal" value={questionRef} onChangeText={setQuestionRef} placeholder="mis. reading_q1" autoCapitalize="none" />
+              <View style={styles.sectionHeader}>
+                <Ionicons name="create-outline" size={20} color={theme.colors.primary[600]} />
+                <Text variant="subtitle" weight="semibold" style={styles.sectionTitle}>
+                  Jawaban
+                </Text>
+              </View>
+              <FormField
+                label="Referensi soal"
+                value={questionRef}
+                onChangeText={setQuestionRef}
+                placeholder="mis. reading_q1"
+                autoCapitalize="none"
+                icon="help-circle-outline"
+              />
               <View style={styles.sectionPicker}>
                 {(['reading', 'listening', 'speaking', 'writing'] as const).map((s) => (
-                  <Button
+                  <Pressable
                     key={s}
-                    label={s}
-                    variant={section === s ? 'primary' : 'outline'}
                     onPress={() => setSection(s)}
-                    style={styles.sectionButton}
-                    labelStyle={styles.sectionButtonLabel}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: section === s }}
                     accessibilityLabel={`Bagian ${s}`}
-                  />
+                    style={[
+                      styles.sectionButton,
+                      section === s && styles.sectionButtonActive,
+                    ]}
+                  >
+                    <Ionicons
+                      name={sectionIcons[s]}
+                      size={16}
+                      color={section === s ? theme.colors.text.inverse : theme.colors.primary[600]}
+                    />
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      style={[
+                        styles.sectionButtonLabel,
+                        section === s && styles.sectionButtonLabelActive,
+                      ]}
+                    >
+                      {s}
+                    </Text>
+                  </Pressable>
                 ))}
               </View>
-              <FormField label="Jawaban" value={answer} onChangeText={setAnswer} placeholder="Tulis jawaban Anda" />
+              <FormField
+                label="Jawaban"
+                value={answer}
+                onChangeText={setAnswer}
+                placeholder="Tulis jawaban Anda"
+                icon="text-outline"
+              />
               <Button
                 label="Simpan jawaban"
                 onPress={handleSaveAnswer}
                 disabled={questionRef.trim().length === 0 || putSubmission.isPending}
                 loading={putSubmission.isPending}
                 variant="secondary"
+                icon="save-outline"
               />
               <Button
                 label="Submit attempt"
@@ -180,21 +243,28 @@ export const ToeflScreen: React.FC<Props> = () => {
                 disabled={submitAttempt.isPending}
                 loading={submitAttempt.isPending}
                 style={styles.submitButton}
+                icon="checkmark-done-outline"
               />
             </Card>
           ) : null}
 
           {attempt.data?.state === 'evaluating' || attempt.data?.state === 'submitted' ? (
-            <Text variant="body" color="secondary" style={styles.evaluating}>
-              Menilai... hasil akan tampil saat status menjadi evaluated.
-            </Text>
+            <View style={styles.evaluatingRow}>
+              <Ionicons name="hourglass-outline" size={20} color={theme.colors.accent[600]} />
+              <Text variant="body" color="secondary" style={styles.evaluating}>
+                Menilai... hasil akan tampil saat status menjadi evaluated.
+              </Text>
+            </View>
           ) : null}
 
           {evaluated && score.data ? (
             <Card variant="elevated" style={styles.card}>
-              <Text variant="subtitle" weight="bold">
-                Hasil (simulasi)
-              </Text>
+              <View style={styles.scoreHeader}>
+                <Ionicons name="trophy-outline" size={24} color={theme.colors.accent[600]} />
+                <Text variant="subtitle" weight="bold" style={styles.scoreTitle}>
+                  Hasil (simulasi)
+                </Text>
+              </View>
               <Text variant="heading" weight="bold" color="primary" style={styles.score}>
                 {score.data.totalScore}
               </Text>
@@ -212,17 +282,87 @@ export const ToeflScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, flexGrow: 1 },
   center: { flex: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main, padding: theme.spacing.lg },
-  title: { marginBottom: theme.spacing.xs },
-  disclaimer: { marginBottom: theme.spacing.lg },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  title: {
+    marginBottom: theme.spacing.xs,
+    color: theme.colors.primary[700],
+  },
+  disclaimerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  disclaimer: {},
   errorBox: { marginBottom: theme.spacing.md },
   card: { marginBottom: theme.spacing.md },
   attemptRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { marginBottom: theme.spacing.sm },
+  attemptInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  attemptTitle: {},
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  sectionTitle: {},
   sectionPicker: { flexDirection: 'row', gap: theme.spacing.xs, marginBottom: theme.spacing.md },
-  sectionButton: { flex: 1, paddingHorizontal: theme.spacing.xs },
-  sectionButtonLabel: { fontSize: theme.typography.sizes.xs, textTransform: 'capitalize' },
+  sectionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary[300],
+  },
+  sectionButtonActive: {
+    backgroundColor: theme.colors.primary[600],
+    borderColor: theme.colors.primary[600],
+  },
+  sectionButtonLabel: {
+    color: theme.colors.primary[700],
+    textTransform: 'capitalize',
+  },
+  sectionButtonLabelActive: {
+    color: theme.colors.text.inverse,
+  },
   submitButton: { marginTop: theme.spacing.sm },
-  evaluating: { textAlign: 'center', marginVertical: theme.spacing.md },
+  evaluatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginVertical: theme.spacing.md,
+  },
+  evaluating: {},
+  scoreHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  scoreTitle: {
+    color: theme.colors.accent[700],
+  },
   score: { textAlign: 'center', marginVertical: theme.spacing.sm },
   backButton: { marginTop: theme.spacing.lg, alignSelf: 'center', minWidth: 160 },
 });

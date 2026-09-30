@@ -10,6 +10,7 @@ import { Card } from '@/ui/components/Card';
 import { Button } from '@/ui/components/Button';
 import { FormField } from '@/ui/components/FormField';
 import { ErrorState, EmptyState } from '@/ui/components/States';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { Podcast } from '@/domain/realtime/realtime.types';
 import { theme } from '@/ui/theme';
 
@@ -57,6 +58,13 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
           data={items}
           keyExtractor={(p) => p.podcastId}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <ScreenRefreshControl
+              onRefresh={() => {
+                /* Library podcast masih lokal; refresh disiapkan untuk endpoint daftar nanti */
+              }}
+            />
+          }
           renderItem={({ item }) => (
             <Pressable
               onPress={() => navigation.navigate('PodcastDetail', { podcastId: item.podcastId })}

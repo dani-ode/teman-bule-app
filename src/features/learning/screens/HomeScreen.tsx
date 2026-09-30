@@ -9,6 +9,7 @@ import { Text } from '@/ui/components/Text';
 import { Card } from '@/ui/components/Card';
 import { Badge } from '@/ui/components/Badge';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { theme } from '@/ui/theme';
@@ -72,6 +73,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             data={courses.data ?? []}
             keyExtractor={(item) => item.courseId}
             contentContainerStyle={styles.list}
+            refreshControl={
+              <ScreenRefreshControl
+                onRefresh={async () => {
+                  await Promise.all([courses.refetch(), profile.refetch()]);
+                }}
+              />
+            }
             renderItem={({ item }) => (
               <Pressable
                 onPress={() => navigation.navigate('CourseDetail', { courseId: item.courseId })}

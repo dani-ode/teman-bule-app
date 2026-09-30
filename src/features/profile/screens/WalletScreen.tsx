@@ -9,6 +9,7 @@ import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
 import { Card } from '@/ui/components/Card';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 
@@ -47,7 +48,12 @@ export const WalletScreen: React.FC<Props> = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <ScreenRefreshControl onRefresh={() => wallet.refetch()} />
+      }
+    >
       <View style={styles.headerSection}>
         <View style={styles.iconCircle}>
           <Ionicons name="wallet-outline" size={36} color={theme.colors.text.inverse} />

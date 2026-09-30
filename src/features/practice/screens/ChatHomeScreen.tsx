@@ -1,57 +1,88 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { ChatStackParamList } from '@/core/navigation/types';
-import { useCreatePracticeSession } from '../hooks/usePractice';
+import {
+  useCreatePracticeSession,
+  usePracticeCategories,
+  useAgentPersonas,
+} from '../hooks/usePractice';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
-import { Card } from '@/ui/components/Card';
-import { Button } from '@/ui/components/Button';
-import { FormField } from '@/ui/components/FormField';
-import { ErrorState } from '@/ui/components/States';
-import { AgentCode } from '@/domain/practice/practice.types';
+import { ErrorState, EmptyState } from '@/ui/components/States';
+import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
+import { AgentDropdown } from '../components/AgentDropdown';
+import { CategoryCard } from '../components/CategoryCard';
+import { AgentCode, PracticeCategory } from '@/domain/practice/practice.types';
 import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'ChatHome'>;
 
 /**
- * Chat entry. The backend practice-category and agent catalog list endpoints
- * are not yet exposed (FE-03); selection IDs therefore come from the user
- * until the catalog contract lands. No seed IDs are hardcoded as truth.
+ * Chat home: pilih persona via dropdown kecil, lalu ketuk kategori untuk
+ * langsung masuk ke ruang chat dengan sesi baru.
  */
 export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
-  const [agent, setAgent] = useState<AgentCode>('elean');
-  const [categoryId, setCategoryId] = useState('');
-  const createSession = useCreatePracticeSession();
+  const [selectedAgentCode, setSelectedAgentCode] = useState<string>('elean');
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<{ message: string; requestId: string | null } | null>(null);
 
-  const handleStart = async () => {
-    if (categoryId.trim().length === 0 || createSession.isPending) return;
+  const categoriesQuery = usePracticeCategories();
+  const agentsQuery = useAgentPersonas();
+  const createSession = useCreatePracticeSession();
+
+  const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data]);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+
+  // Pastikan selected code selalu valid terhadap data backend
+  const effectiveAgentCode = useMemo<AgentCode>(() => {
+    const found = agents.find((a) => a.code === selectedAgentCode);
+    if (found) return found.code as AgentCode;
+    const first = agents[0];
+    return (first?.code as AgentCode) ?? 'elean';
+  }, [agents, selectedAgentCode]);
+
+  const handleCategoryPress = async (category: PracticeCategory) => {
+    if (createSession.isPending) return;
     setError(null);
+    setPendingCategoryId(category.categoryId);
     try {
       const session = await createSession.mutateAsync({
-        agentCode: agent,
-        categoryId: categoryId.trim(),
+        agentCode: effectiveAgentCode,
+        categoryId: category.categoryId,
       });
-      navigation.navigate('Conversation', { sessionId: session.sessionId, agentCode: agent });
+      navigation.navigate('Conversation', {
+        sessionId: session.sessionId,
+        agentCode: effectiveAgentCode,
+      });
     } catch (err) {
       setError(userMessageForError(err));
+    } finally {
+      setPendingCategoryId(null);
     }
   };
 
+  const isLoading = categoriesQuery.isLoading || agentsQuery.isLoading;
+  const isError = categoriesQuery.isError || agentsQuery.isError;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerSection}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="chatbubbles-outline" size={36} color={theme.colors.text.inverse} />
-        </View>
-        <Text variant="title" weight="bold" style={styles.title}>
-          Latihan percakapan
+    <View style={styles.screen}>
+      {/* Header: dropdown persona di kiri atas */}
+      <View style={styles.header}>
+        <Text variant="caption" color="muted" style={styles.headerLabel}>
+          Persona AI
         </Text>
-        <Text variant="body" color="secondary" style={styles.subtitle}>
-          Pilih persona, lalu mulai sesi dengan kategori aktif dari server.
-        </Text>
+        {agents.length > 0 ? (
+          <AgentDropdown
+            agents={agents}
+            selectedCode={effectiveAgentCode}
+            onSelect={setSelectedAgentCode}
+            disabled={createSession.isPending}
+          />
+        ) : (
+          <View style={styles.dropdownPlaceholder} />
+        )}
       </View>
 
       {error ? (
@@ -60,124 +91,85 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       ) : null}
 
-      <Text variant="caption" weight="semibold" color="secondary" style={styles.sectionLabel}>
-        PILIH PERSONA
-      </Text>
-      <View style={styles.agentRow}>
-        {(['elean', 'willy'] as const).map((code) => (
-          <Pressable
-            key={code}
-            onPress={() => setAgent(code)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: agent === code }}
-            accessibilityLabel={`Pilih ${code}`}
-            style={styles.agentOption}
-          >
-            <Card variant={agent === code ? 'outlined' : 'default'} style={styles.agentCard}>
-              <View style={[
-                styles.agentAvatar,
-                agent === code && styles.agentAvatarSelected,
-              ]}>
-                <Ionicons
-                  name={code === 'elean' ? 'woman-outline' : 'man-outline'}
-                  size={32}
-                  color={agent === code ? theme.colors.text.inverse : theme.colors.primary[600]}
-                />
-              </View>
-              <Text variant="subtitle" weight="bold" style={styles.agentName}>
-                {code === 'elean' ? 'Elean' : 'Willy'}
-              </Text>
-              <Text variant="caption" color={agent === code ? 'primary' : 'secondary'}>
-                {agent === code ? '✓ Terpilih' : 'Ketuk untuk memilih'}
-              </Text>
-            </Card>
-          </Pressable>
-        ))}
-      </View>
-
-      <FormField
-        label="ID kategori"
-        value={categoryId}
-        onChangeText={setCategoryId}
-        placeholder="ID kategori dari katalog server"
-        autoCapitalize="none"
-        editable={!createSession.isPending}
-        icon="pricetag-outline"
-      />
-      <View style={styles.hintRow}>
-        <Ionicons name="information-circle-outline" size={14} color={theme.colors.text.muted} />
-        <Text variant="caption" color="muted" style={styles.hint}>
-          Daftar kategori (daily conversation, grammar, pronunciation, job interview, travel, free
-          talk) akan dimuat otomatis setelah endpoint katalog tersedia.
-        </Text>
-      </View>
-
-      <Button
-        label="Mulai sesi"
-        onPress={handleStart}
-        disabled={categoryId.trim().length === 0 || createSession.isPending}
-        loading={createSession.isPending}
-        accessibilityLabel="Mulai sesi percakapan"
-        icon="chatbubble-outline"
-        size="lg"
-      />
-    </ScrollView>
+      {/* Body: grid kategori */}
+      {isLoading ? (
+        <LoadingSpinner message="Memuat kategori..." />
+      ) : isError ? (
+        <ErrorState
+          message="Gagal memuat kategori. Periksa koneksi Anda."
+          onRetry={() => {
+            void categoriesQuery.refetch();
+            void agentsQuery.refetch();
+          }}
+        />
+      ) : categories.length === 0 ? (
+        <EmptyState
+          title="Belum ada kategori"
+          message="Kategori latihan belum tersedia di server."
+          icon="chatbubbles-outline"
+        />
+      ) : (
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.categoryId}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <ScreenRefreshControl
+              onRefresh={async () => {
+                await Promise.all([categoriesQuery.refetch(), agentsQuery.refetch()]);
+              }}
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.cardWrapper}>
+              <CategoryCard
+                category={item}
+                onPress={handleCategoryPress}
+                loading={pendingCategoryId === item.categoryId}
+                disabled={createSession.isPending}
+              />
+            </View>
+          )}
+        />
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { padding: theme.spacing.lg, flexGrow: 1, backgroundColor: theme.colors.background.main },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background.main,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
+  header: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
   },
-  title: {
+  headerLabel: {
     marginBottom: theme.spacing.xs,
-    color: theme.colors.primary[700],
-  },
-  subtitle: {
-    textAlign: 'center',
-  },
-  errorBox: { marginBottom: theme.spacing.md },
-  sectionLabel: {
-    marginBottom: theme.spacing.sm,
-    marginTop: theme.spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  agentRow: { flexDirection: 'row', gap: theme.spacing.md, marginBottom: theme.spacing.lg },
-  agentOption: { flex: 1 },
-  agentCard: { alignItems: 'center', paddingVertical: theme.spacing.xl },
-  agentAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
+  dropdownPlaceholder: {
+    height: 36,
+  },
+  errorBox: {
+    marginHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
-  agentAvatarSelected: {
-    backgroundColor: theme.colors.primary[600],
+  grid: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
   },
-  agentName: { textTransform: 'capitalize' },
-  hintRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.lg,
+  row: {
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
-  hint: {
+  cardWrapper: {
     flex: 1,
   },
 });

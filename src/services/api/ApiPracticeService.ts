@@ -2,11 +2,18 @@ import { z } from 'zod';
 import { IPracticeService } from '@/domain/practice/IPracticeService';
 import {
   AgentCode,
+  AgentPersona,
   ConversationMessage,
+  PracticeCategory,
   PracticeSession,
 } from '@/domain/practice/practice.types';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
-import { messageResponseSchema, sessionResponseSchema } from './dto/domain.dto';
+import {
+  agentPersonaResponseSchema,
+  messageResponseSchema,
+  practiceCategoryResponseSchema,
+  sessionResponseSchema,
+} from './dto/domain.dto';
 
 export class ApiPracticeService implements IPracticeService {
   constructor(private readonly http: HttpTransport) {}
@@ -64,6 +71,40 @@ export class ApiPracticeService implements IPracticeService {
       await this.http.request({ method: 'GET', path: `/practice/sessions/${sessionId}` }),
     );
     return this.mapSession(data);
+  }
+
+  public async listCategories(limit = 50): Promise<PracticeCategory[]> {
+    const data = decode(
+      z.array(practiceCategoryResponseSchema),
+      await this.http.request({
+        method: 'GET',
+        path: `/practice/categories?limit=${limit}`,
+      }),
+    );
+    return data.map((c) => ({
+      categoryId: c.category_id,
+      code: c.code,
+      title: c.title,
+      description: c.description,
+      imageUrl: c.image_url,
+      sortOrder: c.sort_order,
+    }));
+  }
+
+  public async listAgentPersonas(limit = 50): Promise<AgentPersona[]> {
+    const data = decode(
+      z.array(agentPersonaResponseSchema),
+      await this.http.request({
+        method: 'GET',
+        path: `/plans/agents?limit=${limit}`,
+      }),
+    );
+    return data.map((a) => ({
+      agentId: a.agent_id,
+      code: a.code,
+      displayName: a.display_name,
+      profileImageUrl: a.profile_image_url,
+    }));
   }
 
   public async sendMessage(input: {

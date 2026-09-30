@@ -10,6 +10,7 @@ import { Card } from '@/ui/components/Card';
 import { Badge } from '@/ui/components/Badge';
 import { ErrorState } from '@/ui/components/States';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { PlanCode } from '@/domain/account/account.types';
 import { theme } from '@/ui/theme';
 
@@ -54,7 +55,12 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <ScreenRefreshControl onRefresh={() => plan.refetch()} />
+      }
+    >
       <View style={styles.headerSection}>
         <View style={styles.iconCircle}>
           <Ionicons name="diamond-outline" size={36} color={theme.colors.text.inverse} />

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "temanbule",
-    "icon": "./assets/icon/ios/AppIcon~ios-marketing.png",
+    "icon": "./assets/icon/app-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -32,6 +32,12 @@
       ],
       "expo-secure-store",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "640f5c37-410a-4cfe-be62-128e4ea87cb9"
+      }
+    },
+    "owner": "teman-bule"
   }
 }

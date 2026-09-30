@@ -12,6 +12,22 @@ export interface PracticeSession {
   readonly startedAt: string;
 }
 
+export interface PracticeCategory {
+  readonly categoryId: string;
+  readonly code: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly imageUrl: string | null;
+  readonly sortOrder: number;
+}
+
+export interface AgentPersona {
+  readonly agentId: string;
+  readonly code: string;
+  readonly displayName: string;
+  readonly profileImageUrl: string | null;
+}
+
 export interface ConversationMessage {
   readonly messageId: string;
   readonly sessionId: string;

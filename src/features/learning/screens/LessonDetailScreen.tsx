@@ -9,6 +9,7 @@ import { Card } from '@/ui/components/Card';
 import { Button } from '@/ui/components/Button';
 import { Badge } from '@/ui/components/Badge';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ErrorState } from '@/ui/components/States';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { theme } from '@/ui/theme';
@@ -49,7 +50,12 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
   if (!lesson.data) return null;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <ScreenRefreshControl onRefresh={() => lesson.refetch()} />
+      }
+    >
       <View style={styles.headerRow}>
         <Badge label={`Revisi ${lesson.data.revision}`} variant="neutral" />
         <Badge label={lesson.data.contentType} variant="primary" />

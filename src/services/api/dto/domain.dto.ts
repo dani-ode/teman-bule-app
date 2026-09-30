@@ -14,6 +14,24 @@ export const sessionResponseSchema = z.object({
 });
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
+export const practiceCategoryResponseSchema = z.object({
+  category_id: z.string(),
+  code: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  image_url: z.string().nullable(),
+  sort_order: z.number().int(),
+});
+export type PracticeCategoryResponse = z.infer<typeof practiceCategoryResponseSchema>;
+
+export const agentPersonaResponseSchema = z.object({
+  agent_id: z.string(),
+  code: z.string(),
+  display_name: z.string(),
+  profile_image_url: z.string().nullable(),
+});
+export type AgentPersonaResponse = z.infer<typeof agentPersonaResponseSchema>;
+
 export const messageResponseSchema = z.object({
   message_id: z.string(),
   session_id: z.string(),

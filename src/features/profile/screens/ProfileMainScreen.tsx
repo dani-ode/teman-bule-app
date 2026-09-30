@@ -9,6 +9,7 @@ import { Text } from '@/ui/components/Text';
 import { Card } from '@/ui/components/Card';
 import { Badge } from '@/ui/components/Badge';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
@@ -80,7 +81,16 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
   ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <ScreenRefreshControl
+          onRefresh={async () => {
+            await Promise.all([profile.refetch(), plan.refetch(), wallet.refetch()]);
+          }}
+        />
+      }
+    >
       {/* Profile Header */}
       <Card variant="elevated" style={styles.profileCard}>
         {profile.isLoading ? (

@@ -8,6 +8,7 @@ import { Text } from '@/ui/components/Text';
 import { Card } from '@/ui/components/Card';
 import { FormField } from '@/ui/components/FormField';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ErrorState } from '@/ui/components/States';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { theme } from '@/ui/theme';
@@ -40,7 +41,12 @@ export const EditProfileScreen: React.FC<Props> = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <ScreenRefreshControl onRefresh={() => profile.refetch()} />
+      }
+    >
       <View style={styles.headerSection}>
         <View style={styles.iconCircle}>
           <Ionicons name="person-outline" size={36} color={theme.colors.text.inverse} />

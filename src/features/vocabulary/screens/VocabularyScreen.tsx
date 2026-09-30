@@ -15,6 +15,7 @@ import { Badge } from '@/ui/components/Badge';
 import { Button } from '@/ui/components/Button';
 import { FormField } from '@/ui/components/FormField';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 
@@ -113,6 +114,9 @@ export const VocabularyScreen: React.FC<Props> = () => {
           data={vocabulary.data ?? []}
           keyExtractor={(e) => e.entryId}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <ScreenRefreshControl onRefresh={() => vocabulary.refetch()} />
+          }
           renderItem={({ item }) => (
             <Card variant="default" style={styles.card}>
               <View style={styles.cardRow}>

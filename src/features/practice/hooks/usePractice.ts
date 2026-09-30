@@ -25,6 +25,20 @@ export const useCreatePracticeSession = () =>
       getServices().practiceService.createSession(input),
   });
 
+export const usePracticeCategories = () =>
+  useQuery({
+    queryKey: ['practice', 'categories'],
+    queryFn: () => getServices().practiceService.listCategories(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const useAgentPersonas = () =>
+  useQuery({
+    queryKey: ['practice', 'agents'],
+    queryFn: () => getServices().practiceService.listAgentPersonas(),
+    staleTime: 5 * 60 * 1000,
+  });
+
 export const useCompletePracticeSession = () => {
   const qc = useQueryClient();
   return useMutation({

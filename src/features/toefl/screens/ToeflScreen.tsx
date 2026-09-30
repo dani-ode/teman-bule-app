@@ -18,6 +18,7 @@ import { Badge } from '@/ui/components/Badge';
 import { Button } from '@/ui/components/Button';
 import { FormField } from '@/ui/components/FormField';
 import { ErrorState, UnavailableState } from '@/ui/components/States';
+import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { ToeflSection } from '@/domain/learning/learning.types';
 import { theme } from '@/ui/theme';
 
@@ -117,7 +118,24 @@ export const ToeflScreen: React.FC<Props> = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <ScreenRefreshControl
+          onRefresh={async () => {
+            const tasks: Promise<unknown>[] = [];
+            if (attemptId) {
+              tasks.push(attempt.refetch());
+              if (evaluated) {
+                tasks.push(score.refetch());
+              }
+            }
+            await Promise.all(tasks);
+          }}
+        />
+      }
+    >
       <View style={styles.headerSection}>
         <View style={styles.iconCircle}>
           <Ionicons name="school-outline" size={36} color={theme.colors.text.inverse} />

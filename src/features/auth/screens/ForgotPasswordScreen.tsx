@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -37,20 +37,20 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 
   if (sent) {
     return (
-      <View style={styles.centerContainer}>
-        <View style={styles.successIcon}>
+      <View className="flex-1 p-6 justify-center items-center bg-background-main">
+        <View className="w-24 h-24 rounded-full bg-primary-100 items-center justify-center mb-6">
           <Ionicons name="mail-open-outline" size={56} color={theme.colors.primary[600]} />
         </View>
-        <Text variant="title" weight="bold" style={styles.centerTitle}>
-          Tautan terkirim
+        <Text variant="title" weight="bold" align="center" className="mb-2">
+          Link sent
         </Text>
-        <Text variant="body" color="secondary" style={styles.centerBody}>
-          Jika alamat {email} terdaftar, kami mengirim tautan untuk mengatur ulang kata sandi.
+        <Text variant="body" color="secondary" align="center" className="mb-4">
+          If the address {email} is registered, we sent a link to reset your password.
         </Text>
         <Button
-          label="Kembali ke Masuk"
+          label="Back to Sign In"
           onPress={() => navigation.navigate('Login')}
-          style={styles.centerButton}
+          className="self-center min-w-[200px]"
           icon="arrow-back-outline"
         />
       </View>
@@ -58,21 +58,24 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerSection}>
-        <View style={styles.iconCircle}>
+    <ScrollView
+      contentContainerClassName="p-6 flex-grow justify-center bg-background-main"
+      keyboardShouldPersistTaps="handled"
+    >
+      <View className="items-center mb-8">
+        <View className="w-[72px] h-[72px] rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
           <Ionicons name="key-outline" size={36} color={theme.colors.text.inverse} />
         </View>
-        <Text variant="heading" weight="bold" style={styles.title}>
-          Lupa kata sandi
+        <Text variant="heading" weight="bold" className="mb-1 text-primary-700">
+          Forgot password
         </Text>
-        <Text variant="body" color="secondary" style={styles.subtitle}>
-          Masukkan email Anda. Kami akan mengirim tautan pengaturan ulang.
+        <Text variant="body" color="secondary" align="center" className="mb-6">
+          Enter your email. We will send you a reset link.
         </Text>
       </View>
 
       {error ? (
-        <View style={styles.errorBox}>
+        <View className="mb-3">
           <ErrorState message={error.message} requestId={error.requestId} />
         </View>
       ) : null}
@@ -81,7 +84,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         label="Email"
         value={email}
         onChangeText={setEmail}
-        placeholder="nama@email.com"
+        placeholder="name@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
         editable={!submitting}
@@ -89,7 +92,7 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       <Button
-        label="Kirim tautan"
+        label="Send link"
         onPress={handleSubmit}
         disabled={!canSubmit}
         loading={submitting}
@@ -98,37 +101,3 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  title: { marginBottom: theme.spacing.xs, color: theme.colors.primary[700] },
-  subtitle: { marginBottom: theme.spacing.xl, textAlign: 'center' },
-  errorBox: { marginBottom: theme.spacing.md },
-  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.main },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
-  centerButton: { alignSelf: 'center', minWidth: 200 },
-});

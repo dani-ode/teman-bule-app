@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ConversationMessage } from '@/domain/practice/practice.types';
 import { PendingMessage } from '../hooks/usePractice';
@@ -21,45 +21,54 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
   const text = pending ? message.localText : '';
 
   return (
-    <View style={[styles.row, isUser ? styles.rowUser : styles.rowAgent]}>
+    <View
+      className={[
+        'flex-row my-1 items-end',
+        isUser ? 'justify-end' : 'justify-start',
+      ].join(' ')}
+    >
       {!isUser ? (
-        <View style={styles.agentAvatar}>
+        <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center mr-2 mb-1">
           <Ionicons name="person" size={16} color={theme.colors.primary[600]} />
         </View>
       ) : null}
       <View
-        style={[
-          styles.bubble,
-          isUser ? styles.bubbleUser : styles.bubbleAgent,
-          pending && message.failed ? styles.bubbleFailed : null,
-        ]}
+        className={[
+          'max-w-[80%] rounded-lg p-3 shadow-bubble',
+          isUser
+            ? 'bg-background-userBubble rounded-br-sm'
+            : 'bg-background-aiBubble rounded-bl-sm border border-khaki-200',
+          pending && message.failed ? 'border border-danger' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         accessible
-        accessibilityLabel={`${isUser ? 'Anda' : 'Tutor'}: ${text}`}
+        accessibilityLabel={`${isUser ? 'You' : 'Tutor'}: ${text}`}
       >
         {pending && !message.failed ? (
-          <View style={styles.pendingRow}>
+          <View className="flex-row items-center gap-1 mb-1">
             <Ionicons name="time-outline" size={14} color={theme.colors.text.muted} />
-            <Text variant="caption" color="muted" style={styles.pendingText}>
-              Mengirim...
+            <Text variant="caption" color="muted">
+              Sending...
             </Text>
           </View>
         ) : null}
         {pending && message.failed ? (
-          <Badge label="Gagal terkirim" variant="warning" style={styles.badge} />
+          <Badge label="Failed to send" variant="warning" className="mb-1" />
         ) : null}
-        <Text variant="body" style={isUser ? styles.textUser : styles.textAgent}>
+        <Text variant="body" className={isUser ? 'text-ink-inverse' : 'text-ink-primary'}>
           {text}
         </Text>
         {pending && message.failed && onRetry ? (
           <Pressable
             onPress={onRetry}
             accessibilityRole="button"
-            accessibilityLabel="Coba kirim ulang"
-            style={styles.retryButton}
+            accessibilityLabel="Retry sending"
+            className="flex-row items-center gap-1 mt-1"
           >
             <Ionicons name="refresh" size={14} color={theme.colors.primary[600]} />
-            <Text variant="caption" weight="bold" color="primary" style={styles.retry}>
-              Kirim ulang
+            <Text variant="caption" weight="bold" className="text-primary-600">
+              Resend
             </Text>
           </Pressable>
         ) : null}
@@ -67,56 +76,3 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', marginVertical: theme.spacing.xs, alignItems: 'flex-end' },
-  rowUser: { justifyContent: 'flex-end' },
-  rowAgent: { justifyContent: 'flex-start' },
-  agentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  bubble: {
-    maxWidth: '80%',
-    borderRadius: theme.radii.lg,
-    padding: theme.spacing.md,
-    ...theme.shadows.bubble,
-  },
-  bubbleUser: {
-    backgroundColor: theme.colors.background.userBubble,
-    borderBottomRightRadius: theme.radii.sm,
-  },
-  bubbleAgent: {
-    backgroundColor: theme.colors.background.aiBubble,
-    borderBottomLeftRadius: theme.radii.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.khaki[200],
-  },
-  bubbleFailed: {
-    borderColor: theme.colors.semantic.error,
-    borderWidth: 1,
-  },
-  textUser: { color: theme.colors.text.inverse },
-  textAgent: { color: theme.colors.text.primary },
-  pendingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.xs,
-  },
-  pendingText: {},
-  badge: { marginBottom: theme.spacing.xs },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.xs,
-  },
-  retry: {},
-});

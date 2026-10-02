@@ -33,7 +33,7 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
   if (lesson.isLoading) {
     return (
       <View style={styles.center}>
-        <LoadingSpinner message="Memuat materi..." />
+        <LoadingSpinner message="Loading lesson..." />
       </View>
     );
   }
@@ -57,14 +57,14 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
       }
     >
       <View style={styles.headerRow}>
-        <Badge label={`Revisi ${lesson.data.revision}`} variant="neutral" />
+        <Badge label={`Revision ${lesson.data.revision}`} variant="neutral" />
         <Badge label={lesson.data.contentType} variant="primary" />
       </View>
       <Card variant="elevated" style={styles.card}>
         <View style={styles.contentHeader}>
           <Ionicons name="document-text-outline" size={24} color={theme.colors.primary[600]} />
           <Text variant="subtitle" weight="bold" style={styles.contentTitle}>
-            Materi Pelajaran
+            Lesson Material
           </Text>
         </View>
         <View style={styles.divider} />
@@ -73,7 +73,7 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
         </Text>
       </Card>
       <Button
-        label="Tandai selesai"
+        label="Mark as completed"
         onPress={handleMarkCompleted}
         loading={recordProgress.isPending}
         disabled={recordProgress.isPending || recordProgress.isSuccess}
@@ -84,7 +84,7 @@ export const LessonDetailScreen: React.FC<Props> = ({ route }) => {
         <View style={styles.successRow}>
           <Ionicons name="checkmark-circle" size={16} color={theme.colors.semantic.success} />
           <Text variant="caption" color="secondary" style={styles.success}>
-            Progres tersimpan.
+            Progress saved.
           </Text>
         </View>
       ) : null}

@@ -25,6 +25,32 @@ export const useCreatePracticeSession = () =>
       getServices().practiceService.createSession(input),
   });
 
+/** Daftar session chat milik user (filter opsional agent/category/state). */
+export const usePracticeSessionList = (input?: {
+  agentCode?: AgentCode;
+  categoryId?: string;
+  state?: 'active' | 'completed' | 'abandoned';
+  limit?: number;
+  enabled?: boolean;
+}) =>
+  useQuery({
+    queryKey: [
+      'practice',
+      'sessions',
+      input?.agentCode ?? null,
+      input?.categoryId ?? null,
+      input?.state ?? null,
+    ],
+    queryFn: () =>
+      getServices().practiceService.listSessions({
+        agentCode: input?.agentCode,
+        categoryId: input?.categoryId,
+        state: input?.state,
+        limit: input?.limit ?? 50,
+      }),
+    enabled: input?.enabled ?? true,
+  });
+
 export const usePracticeCategories = () =>
   useQuery({
     queryKey: ['practice', 'categories'],

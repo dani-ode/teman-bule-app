@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { Button } from './Button';
@@ -14,29 +14,29 @@ export interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  title = 'Terjadi kesalahan',
+  title = 'Something went wrong',
   message,
   requestId,
   onRetry,
-  retryLabel = 'Coba lagi',
+  retryLabel = 'Try Again',
 }) => (
-  <View style={styles.container} accessibilityRole="alert">
-    <View style={styles.iconContainer}>
+  <View className="items-center p-6" accessibilityRole="alert">
+    <View className="mb-4">
       <Ionicons name="alert-circle-outline" size={48} color={theme.colors.semantic.error} />
     </View>
-    <Text variant="subtitle" weight="bold" style={styles.title}>
+    <Text variant="subtitle" weight="bold" align="center" className="mb-2">
       {title}
     </Text>
-    <Text variant="body" color="secondary" style={styles.message}>
+    <Text variant="body" color="secondary" align="center">
       {message}
     </Text>
     {requestId ? (
-      <Text variant="caption" color="muted" style={styles.requestId}>
-        ID permintaan: {requestId}
+      <Text variant="caption" color="muted" className="mt-2">
+        Request ID: {requestId}
       </Text>
     ) : null}
     {onRetry ? (
-      <Button label={retryLabel} onPress={onRetry} variant="secondary" style={styles.button} icon="refresh" />
+      <Button label={retryLabel} onPress={onRetry} variant="secondary" className="mt-4 min-w-[160px]" icon="refresh" />
     ) : null}
   </View>
 );
@@ -56,20 +56,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   actionLabel,
   onAction,
 }) => (
-  <View style={styles.container}>
-    <View style={styles.iconContainer}>
+  <View className="items-center p-6">
+    <View className="mb-4">
       <Ionicons name={icon} size={48} color={theme.colors.text.muted} />
     </View>
-    <Text variant="subtitle" weight="bold" style={styles.title}>
+    <Text variant="subtitle" weight="bold" align="center" className="mb-2">
       {title}
     </Text>
     {message ? (
-      <Text variant="body" color="secondary" style={styles.message}>
+      <Text variant="body" color="secondary" align="center">
         {message}
       </Text>
     ) : null}
     {actionLabel && onAction ? (
-      <Button label={actionLabel} onPress={onAction} variant="secondary" style={styles.button} />
+      <Button label={actionLabel} onPress={onAction} variant="secondary" className="mt-4 min-w-[160px]" />
     ) : null}
   </View>
 );
@@ -81,40 +81,16 @@ export interface UnavailableStateProps {
 
 /** Explicit feature-unavailable state; never a silent mock/fallback (R01/R03). */
 export const UnavailableState: React.FC<UnavailableStateProps> = ({ feature, message }) => (
-  <View style={styles.container}>
-    <View style={styles.iconContainer}>
+  <View className="items-center p-6">
+    <View className="mb-4">
       <Ionicons name="construct-outline" size={48} color={theme.colors.accent[500]} />
     </View>
-    <Text variant="subtitle" weight="bold" style={styles.title}>
-      {feature} belum tersedia
+    <Text variant="subtitle" weight="bold" align="center" className="mb-2">
+      {feature} is not available yet
     </Text>
-    <Text variant="body" color="secondary" style={styles.message}>
+    <Text variant="body" color="secondary" align="center">
       {message ??
-        'Fitur ini belum diaktifkan pada server. Silakan coba lagi nanti atau hubungi dukungan.'}
+        'This feature is not enabled on the server yet. Please try again later or contact support.'}
     </Text>
   </View>
 );
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
-  iconContainer: {
-    marginBottom: theme.spacing.lg,
-  },
-  title: {
-    textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  message: {
-    textAlign: 'center',
-  },
-  requestId: {
-    marginTop: theme.spacing.sm,
-  },
-  button: {
-    marginTop: theme.spacing.lg,
-    minWidth: 160,
-  },
-});

@@ -34,8 +34,8 @@ export const PodcastDetailScreen: React.FC<Props> = ({ route }) => {
         </View>
       </View>
       <UnavailableState
-        feature="Unggah sumber & pemutaran"
-        message="Unggah PDF menunggu adapter penyimpanan media (DEC-15) dan pemutaran menunggu realtime (DEC-14). Metadata podcast sudah tersimpan di server."
+        feature="Source upload & playback"
+        message="PDF upload is pending the media-storage adapter (DEC-15) and playback is pending realtime (DEC-14). Podcast metadata is already stored on the server."
       />
     </ScrollView>
   );

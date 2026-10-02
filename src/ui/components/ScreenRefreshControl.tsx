@@ -7,8 +7,8 @@ interface ScreenRefreshControlProps extends Omit<RefreshControlProps, 'refreshin
 }
 
 /**
- * RefreshControl dengan warna theme yang konsisten.
- * Mengelola state refreshing secara internal agar pemakaian cukup satu baris.
+ * RefreshControl with consistent theme colors.
+ * Manages the refreshing state internally so usage stays a single line.
  */
 export const ScreenRefreshControl: React.FC<ScreenRefreshControlProps> = ({
   onRefresh,

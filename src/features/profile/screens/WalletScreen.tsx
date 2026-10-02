@@ -21,7 +21,7 @@ export const WalletScreen: React.FC<Props> = () => {
   if (wallet.isLoading) {
     return (
       <View style={styles.center}>
-        <LoadingSpinner message="Memuat wallet..." />
+        <LoadingSpinner message="Loading wallet..." />
       </View>
     );
   }
@@ -32,8 +32,8 @@ export const WalletScreen: React.FC<Props> = () => {
       return (
         <View style={styles.center}>
           <EmptyState
-            title="Wallet belum ada"
-            message="Lakukan top-up pertama untuk mengisi saldo token. Top-up dibuka setelah gateway pembayaran dikonfigurasi di server."
+            title="No wallet yet"
+            message="Make your first top-up to add token balance. Top-up opens once the payment gateway is configured on the server."
             icon="wallet-outline"
           />
         </View>
@@ -73,7 +73,7 @@ export const WalletScreen: React.FC<Props> = () => {
               {wallet.data?.availableUnits ?? 0}
             </Text>
             <Text variant="caption" color="secondary">
-              Token tersedia
+              Available tokens
             </Text>
           </View>
           <View style={styles.divider} />
@@ -85,14 +85,14 @@ export const WalletScreen: React.FC<Props> = () => {
               {wallet.data?.heldUnits ?? 0}
             </Text>
             <Text variant="caption" color="secondary">
-              Tertahan
+              On hold
             </Text>
           </View>
         </View>
         <View style={styles.assetRow}>
           <Ionicons name="information-circle-outline" size={14} color={theme.colors.text.muted} />
           <Text variant="caption" color="muted" style={styles.asset}>
-            Aset: {wallet.data?.asset}
+            Asset: {wallet.data?.asset}
           </Text>
         </View>
       </Card>
@@ -100,8 +100,8 @@ export const WalletScreen: React.FC<Props> = () => {
       <View style={styles.noteRow}>
         <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.text.muted} />
         <Text variant="caption" color="secondary" style={styles.note}>
-          Saldo final ditentukan server. Token yang tertahan adalah reservasi untuk pekerjaan yang
-          sedang berjalan.
+          Final balance is determined by the server. Tokens on hold are reservations for jobs that
+          are currently running.
         </Text>
       </View>
     </ScrollView>

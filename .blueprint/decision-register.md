@@ -13,6 +13,7 @@ Semua keputusan di bawah **open**. Pemilik berbasis peran perlu ditunjuk; propos
 | FE-07 | Harga/token scale, quote display, Xendit product/checkout return, mobile-store distribution policy dan sandbox evidence | Produk + billing + release | F3 top-up live | DEC-06, DEC-07 |
 | FE-08 | Privacy/cache retention, deletion UX, telemetry provider/redaction, accessibility/performance budgets, build/update channels/signing/runtime rollback | Produk + frontend + operasi | Production release | DEC-16 |
 | FE-09 | Elean/Willy profile copy/avatar assets, curriculum/TOEFL DTO/rubric, facts correction/consent, bilingual copy | Produk + AI + frontend | Published content/persona UI | DEC-12, DEC-13, DEC-17 |
+| FE-10 | Styling strategy: NativeWind v4 untuk layout-level styling di screens; komponen `src/ui` tetap variant-based + theme tokens; shadow/elevation/transform tetap via `style` prop; `tailwind.config.ts` derive dari `src/ui/theme` (single source of truth, no token duplication) | Frontend | Migrasi bertahap screens (19 file), tidak rewrite `src/ui` | — | proposed — setup + pilot LoginScreen terverifikasi (type-check, 31 unit tests, expo export bundle dengan compiled classes); runtime dev-build evidence masih open
 
 ## Contract packets sebelum coding adapter
 

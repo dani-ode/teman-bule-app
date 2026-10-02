@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, Image, Modal } from 'react-native';
+import { View, Pressable, Image, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AgentPersona } from '@/domain/practice/practice.types';
 import { Text } from '@/ui/components/Text';
@@ -38,17 +38,16 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
         onPress={() => !disabled && setVisible(true)}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`Persona AI: ${selected.displayName}`}
-        style={({ pressed }) => [
-          styles.trigger,
-          pressed && styles.triggerPressed,
-          disabled && styles.triggerDisabled,
-        ]}
+        accessibilityLabel={`AI Persona: ${selected.displayName}`}
+        className={[
+          'flex-row items-center self-start bg-background-card rounded-full border border-khaki-200 py-1 px-2 gap-2 shadow-bubble',
+          disabled ? 'opacity-50' : 'active:opacity-85',
+        ].join(' ')}
       >
         {selected.profileImageUrl ? (
-          <Image source={{ uri: selected.profileImageUrl }} style={styles.avatar} />
+          <Image source={{ uri: selected.profileImageUrl }} className="w-7 h-7 rounded-full" />
         ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
+          <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
             <Ionicons
               name={selected.code === 'elean' ? 'woman' : 'man'}
               size={16}
@@ -56,7 +55,7 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
             />
           </View>
         )}
-        <Text variant="body" weight="semibold" style={styles.name}>
+        <Text variant="body" weight="semibold" className="text-sm">
           {selected.displayName}
         </Text>
         <Ionicons
@@ -72,8 +71,11 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setVisible(false)}>
-          <View style={styles.menu}>
+        <Pressable
+          className="flex-1 bg-black/25 justify-start items-start pt-[110px] pl-4"
+          onPress={() => setVisible(false)}
+        >
+          <View className="bg-background-card rounded-md border border-khaki-200 py-1 min-w-[200px] shadow-elevated">
             {agents.map((agent) => {
               const isActive = agent.code === selectedCode;
               return (
@@ -81,17 +83,18 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
                   key={agent.agentId}
                   onPress={() => handleSelect(agent.code)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Pilih ${agent.displayName}`}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    isActive && styles.menuItemActive,
-                    pressed && styles.menuItemPressed,
-                  ]}
+                  accessibilityLabel={`Select ${agent.displayName}`}
+                  className={[
+                    'flex-row items-center py-2 px-3 gap-3',
+                    isActive ? 'bg-primary-50' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   {agent.profileImageUrl ? (
-                    <Image source={{ uri: agent.profileImageUrl }} style={styles.menuAvatar} />
+                    <Image source={{ uri: agent.profileImageUrl }} className="w-8 h-8 rounded-full" />
                   ) : (
-                    <View style={[styles.menuAvatar, styles.avatarFallback]}>
+                    <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center">
                       <Ionicons
                         name={agent.code === 'elean' ? 'woman' : 'man'}
                         size={18}
@@ -103,7 +106,7 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
                     variant="body"
                     weight={isActive ? 'semibold' : 'regular'}
                     color={isActive ? 'primary' : 'secondary'}
-                    style={styles.menuName}
+                    className="flex-1"
                   >
                     {agent.displayName}
                   </Text>
@@ -119,76 +122,3 @@ export const AgentDropdown: React.FC<AgentDropdownProps> = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.radii.full,
-    borderWidth: 1,
-    borderColor: theme.colors.khaki[200],
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    gap: theme.spacing.sm,
-    ...theme.shadows.bubble,
-  },
-  triggerPressed: {
-    opacity: 0.85,
-  },
-  triggerDisabled: {
-    opacity: 0.5,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  avatarFallback: {
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  name: {
-    fontSize: 14,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    paddingTop: 110,
-    paddingLeft: theme.spacing.lg,
-  },
-  menu: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.khaki[200],
-    paddingVertical: theme.spacing.xs,
-    minWidth: 200,
-    ...theme.shadows.elevated,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
-  menuItemActive: {
-    backgroundColor: theme.colors.primary[50],
-  },
-  menuItemPressed: {
-    backgroundColor: theme.colors.khaki[100],
-  },
-  menuAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  menuName: {
-    flex: 1,
-  },
-});

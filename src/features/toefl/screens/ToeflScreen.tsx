@@ -104,10 +104,10 @@ export const ToeflScreen: React.FC<Props> = () => {
       <View style={styles.center}>
         <UnavailableState
           feature="TOEFL"
-          message="Fitur TOEFL belum diaktifkan pada server."
+          message="The TOEFL feature is not yet enabled on the server."
         />
         <Button
-          label="Kembali"
+          label="Back"
           onPress={() => setUnavailable(false)}
           variant="secondary"
           style={styles.backButton}
@@ -141,12 +141,12 @@ export const ToeflScreen: React.FC<Props> = () => {
           <Ionicons name="school-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.title}>
-          Simulasi TOEFL
+          TOEFL Simulation
         </Text>
         <View style={styles.disclaimerRow}>
           <Ionicons name="warning-outline" size={14} color={theme.colors.accent[600]} />
           <Text variant="caption" color="secondary" style={styles.disclaimer}>
-            Ini simulasi latihan, bukan skor TOEFL resmi.
+            This is a practice simulation, not an official TOEFL score.
           </Text>
         </View>
       </View>
@@ -160,15 +160,15 @@ export const ToeflScreen: React.FC<Props> = () => {
       {!attemptId ? (
         <Card variant="default" style={styles.card}>
           <FormField
-            label="ID versi tes"
+            label="Test version ID"
             value={testVersionId}
             onChangeText={setTestVersionId}
-            placeholder="ID versi tes yang dipublikasikan"
+            placeholder="Published test version ID"
             autoCapitalize="none"
             icon="document-outline"
           />
           <Button
-            label="Mulai attempt"
+            label="Start attempt"
             onPress={handleStart}
             disabled={testVersionId.trim().length === 0 || startAttempt.isPending}
             loading={startAttempt.isPending}
@@ -183,7 +183,7 @@ export const ToeflScreen: React.FC<Props> = () => {
               <View style={styles.attemptInfo}>
                 <Ionicons name="flag-outline" size={20} color={theme.colors.primary[600]} />
                 <Text variant="subtitle" weight="bold" style={styles.attemptTitle}>
-                  Attempt aktif
+                  Active attempt
                 </Text>
               </View>
               <Badge label={attempt.data?.state ?? '...'} variant="primary" />
@@ -198,14 +198,14 @@ export const ToeflScreen: React.FC<Props> = () => {
               <View style={styles.sectionHeader}>
                 <Ionicons name="create-outline" size={20} color={theme.colors.primary[600]} />
                 <Text variant="subtitle" weight="semibold" style={styles.sectionTitle}>
-                  Jawaban
+                  Answers
                 </Text>
               </View>
               <FormField
-                label="Referensi soal"
+                label="Question reference"
                 value={questionRef}
                 onChangeText={setQuestionRef}
-                placeholder="mis. reading_q1"
+                placeholder="e.g. reading_q1"
                 autoCapitalize="none"
                 icon="help-circle-outline"
               />
@@ -216,7 +216,7 @@ export const ToeflScreen: React.FC<Props> = () => {
                     onPress={() => setSection(s)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: section === s }}
-                    accessibilityLabel={`Bagian ${s}`}
+                    accessibilityLabel={`${s} section`}
                     style={[
                       styles.sectionButton,
                       section === s && styles.sectionButtonActive,
@@ -241,14 +241,14 @@ export const ToeflScreen: React.FC<Props> = () => {
                 ))}
               </View>
               <FormField
-                label="Jawaban"
+                label="Answer"
                 value={answer}
                 onChangeText={setAnswer}
-                placeholder="Tulis jawaban Anda"
+                placeholder="Type your answer"
                 icon="text-outline"
               />
               <Button
-                label="Simpan jawaban"
+                label="Save answer"
                 onPress={handleSaveAnswer}
                 disabled={questionRef.trim().length === 0 || putSubmission.isPending}
                 loading={putSubmission.isPending}
@@ -270,7 +270,7 @@ export const ToeflScreen: React.FC<Props> = () => {
             <View style={styles.evaluatingRow}>
               <Ionicons name="hourglass-outline" size={20} color={theme.colors.accent[600]} />
               <Text variant="body" color="secondary" style={styles.evaluating}>
-                Menilai... hasil akan tampil saat status menjadi evaluated.
+                Scoring... results will appear once the status becomes evaluated.
               </Text>
             </View>
           ) : null}
@@ -280,7 +280,7 @@ export const ToeflScreen: React.FC<Props> = () => {
               <View style={styles.scoreHeader}>
                 <Ionicons name="trophy-outline" size={24} color={theme.colors.accent[600]} />
                 <Text variant="subtitle" weight="bold" style={styles.scoreTitle}>
-                  Hasil (simulasi)
+                  Results (simulation)
                 </Text>
               </View>
               <Text variant="heading" weight="bold" color="primary" style={styles.score}>

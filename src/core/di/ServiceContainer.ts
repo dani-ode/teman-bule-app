@@ -18,6 +18,7 @@ import { ICallService, IPodcastService } from '@/domain/realtime/IRealtimeServic
 
 import { ApiAuthService } from '@/services/api/ApiAuthService';
 import { ApiAccountService } from '@/services/api/ApiAccountService';
+import { ApiMediaService } from '@/services/api/ApiMediaService';
 import { ApiPracticeService } from '@/services/api/ApiPracticeService';
 import {
   ApiLearningService,
@@ -41,6 +42,7 @@ export interface AppServices {
   readonly authService: IAuthService;
   readonly accountService: IAccountService;
   readonly practiceService: IPracticeService;
+  readonly mediaService: ApiMediaService;
   readonly vocabularyService: IVocabularyService;
   readonly learningService: ILearningService;
   readonly toeflService: IToeflService;
@@ -75,6 +77,7 @@ const buildApiServices = (): AppServices => {
     authService,
     accountService: new ApiAccountService(transport),
     practiceService: new ApiPracticeService(transport),
+    mediaService: new ApiMediaService(transport),
     vocabularyService: new ApiVocabularyService(transport),
     learningService: new ApiLearningService(transport),
     toeflService: new ApiToeflService(transport),

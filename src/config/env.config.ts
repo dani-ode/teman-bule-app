@@ -9,6 +9,7 @@ export interface AppEnvConfig {
   readonly mockLatencyMs: number;
   readonly apiBaseUrl: string;
   readonly apiTimeoutMs: number;
+  readonly livekitUrl: string;
   readonly appName: string;
   readonly appVersion: string;
 }
@@ -73,6 +74,28 @@ const parseApiUrl = (value: string | undefined, environment: AppEnvConfig['envir
   return raw;
 };
 
+const parseLivekitUrl = (value: string | undefined, environment: AppEnvConfig['environment']): string => {
+  const name = 'EXPO_PUBLIC_LIVEKIT_URL';
+  const raw = required(name, value);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new EnvironmentConfigError(name);
+  }
+  const isWs = url.protocol === 'ws:' || url.protocol === 'wss:';
+  if (
+    !/^wss?:\/\//.test(raw) || /[\s\\?#]/.test(raw) ||
+    !isWs ||
+    (environment !== 'development' && url.protocol !== 'wss:') ||
+    url.username || url.password || url.search || url.hash ||
+    url.pathname !== '/' || raw.endsWith('/')
+  ) {
+    throw new EnvironmentConfigError(name);
+  }
+  return raw;
+};
+
 // Expo CLI requires static dot notation to inline public environment values.
 const environment = parseEnvironment(process.env.EXPO_PUBLIC_APP_ENV);
 
@@ -82,6 +105,7 @@ export const envConfig: AppEnvConfig = Object.freeze({
   mockLatencyMs: integer('EXPO_PUBLIC_MOCK_LATENCY_MS', process.env.EXPO_PUBLIC_MOCK_LATENCY_MS, true),
   apiBaseUrl: parseApiUrl(process.env.EXPO_PUBLIC_API_BASE_URL, environment),
   apiTimeoutMs: integer('EXPO_PUBLIC_API_TIMEOUT_MS', process.env.EXPO_PUBLIC_API_TIMEOUT_MS, false),
+  livekitUrl: parseLivekitUrl(process.env.EXPO_PUBLIC_LIVEKIT_URL, environment),
   appName: required('EXPO_PUBLIC_APP_NAME', process.env.EXPO_PUBLIC_APP_NAME),
   appVersion: required('EXPO_PUBLIC_APP_VERSION', process.env.EXPO_PUBLIC_APP_VERSION),
 });

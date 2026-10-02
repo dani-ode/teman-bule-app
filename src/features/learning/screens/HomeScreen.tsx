@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '@/core/navigation/types';
@@ -28,16 +29,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const courses = useCourses();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
             <Text variant="caption" color="secondary">
-              Selamat datang kembali
+              Welcome back
             </Text>
             <Text variant="title" weight="bold">
-              {profile.data?.displayName ?? 'Pelajar'}
+              {profile.data?.displayName ?? 'Learner'}
             </Text>
           </View>
           <View style={styles.avatarCircle}>
@@ -48,7 +49,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Content */}
       {courses.isLoading ? (
-        <LoadingSpinner message="Memuat kursus..." />
+        <LoadingSpinner message="Loading courses..." />
       ) : courses.isError ? (
         <ErrorState
           message={userMessageForError(courses.error).message}
@@ -57,8 +58,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         />
       ) : (courses.data ?? []).length === 0 ? (
         <EmptyState
-          title="Belum ada kursus"
-          message="Kursus yang dipublikasikan akan tampil di sini."
+          title="No courses yet"
+          message="Published courses will appear here."
           icon="book-outline"
         />
       ) : (
@@ -66,7 +67,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.sectionHeader}>
             <Ionicons name="book" size={20} color={theme.colors.primary[600]} />
             <Text variant="subtitle" weight="bold" style={styles.sectionTitle}>
-              Kursus Tersedia
+              Available Courses
             </Text>
           </View>
           <FlatList
@@ -84,7 +85,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               <Pressable
                 onPress={() => navigation.navigate('CourseDetail', { courseId: item.courseId })}
                 accessibilityRole="button"
-                accessibilityLabel={`Buka kursus ${item.title}`}
+                accessibilityLabel={`Open course ${item.title}`}
               >
                 <Card variant="elevated" style={styles.card}>
                   <View style={styles.cardRow}>
@@ -118,7 +119,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           />
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

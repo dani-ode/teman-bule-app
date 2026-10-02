@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -28,7 +28,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const handleRegister = async () => {
     setFieldError(null);
     if (password !== confirm) {
-      setFieldError('Konfirmasi kata sandi tidak cocok.');
+      setFieldError('Password confirmation does not match.');
       return;
     }
     if (!canSubmit) return;
@@ -46,21 +46,21 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   if (registered) {
     return (
-      <View style={styles.centerContainer}>
-        <View style={styles.successIcon}>
+      <View className="flex-1 p-6 justify-center items-center bg-background-main">
+        <View className="w-24 h-24 rounded-full bg-primary-100 items-center justify-center mb-6">
           <Ionicons name="mail-open-outline" size={56} color={theme.colors.primary[600]} />
         </View>
-        <Text variant="title" weight="bold" style={styles.centerTitle}>
-          Periksa email Anda
+        <Text variant="title" weight="bold" align="center" className="mb-2">
+          Check your email
         </Text>
-        <Text variant="body" color="secondary" style={styles.centerBody}>
-          Jika alamat {email} terdaftar, kami telah mengirim tautan verifikasi. Verifikasi email
-          Anda lalu masuk.
+        <Text variant="body" color="secondary" align="center" className="mb-4">
+          If the address {email} is registered, we have sent a verification link. Verify your
+          email, then sign in.
         </Text>
         <Button
-          label="Masuk"
+          label="Sign In"
           onPress={() => navigation.navigate('Login')}
-          style={styles.centerButton}
+          className="self-center min-w-[200px]"
           icon="log-in-outline"
         />
       </View>
@@ -69,24 +69,24 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={{ flex: 1, backgroundColor: theme.colors.background.main }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerSection}>
-          <View style={styles.logoCircle}>
+      <ScrollView contentContainerClassName="p-6 flex-grow justify-center" keyboardShouldPersistTaps="handled">
+        <View className="items-center mb-8">
+          <View className="w-[72px] h-[72px] rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
             <Ionicons name="person-add-outline" size={36} color={theme.colors.text.inverse} />
           </View>
-          <Text variant="heading" weight="bold" style={styles.title}>
-            Buat akun
+          <Text variant="heading" weight="bold" className="mb-1 text-primary-700">
+            Create account
           </Text>
-          <Text variant="body" color="secondary" style={styles.subtitle}>
-            Daftar dengan email untuk memulai belajar
+          <Text variant="body" color="secondary" align="center">
+            Sign up with your email to start learning
           </Text>
         </View>
 
         {error ? (
-          <View style={styles.errorBox}>
+          <View className="mb-3">
             <ErrorState message={error.message} requestId={error.requestId} />
           </View>
         ) : null}
@@ -95,27 +95,27 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           label="Email"
           value={email}
           onChangeText={setEmail}
-          placeholder="nama@email.com"
+          placeholder="name@email.com"
           keyboardType="email-address"
           autoCapitalize="none"
           editable={!submitting}
           icon="mail-outline"
         />
         <FormField
-          label="Kata sandi (min. 8 karakter)"
+          label="Password (min. 8 characters)"
           value={password}
           onChangeText={setPassword}
-          placeholder="Kata sandi"
+          placeholder="Password"
           secureTextEntry
           autoCapitalize="none"
           editable={!submitting}
           icon="lock-closed-outline"
         />
         <FormField
-          label="Konfirmasi kata sandi"
+          label="Confirm password"
           value={confirm}
           onChangeText={setConfirm}
-          placeholder="Ulangi kata sandi"
+          placeholder="Repeat your password"
           secureTextEntry
           autoCapitalize="none"
           editable={!submitting}
@@ -124,22 +124,22 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         />
 
         <Button
-          label="Daftar"
+          label="Sign Up"
           onPress={handleRegister}
           disabled={!canSubmit}
           loading={submitting}
-          accessibilityLabel="Daftar akun baru"
+          accessibilityLabel="Create a new account"
           icon="person-add-outline"
           size="lg"
         />
 
-        <View style={styles.footer}>
+        <View className="flex-row justify-center mt-6">
           <Text variant="body" color="secondary">
-            Sudah punya akun?{' '}
+            Already have an account?{' '}
           </Text>
           <Pressable onPress={() => navigation.navigate('Login')} accessibilityRole="button">
             <Text variant="body" color="primary" weight="bold">
-              Masuk
+              Sign In
             </Text>
           </Pressable>
         </View>
@@ -147,50 +147,3 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.background.main },
-  container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center' },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  title: {
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.primary[700],
-  },
-  subtitle: {
-    textAlign: 'center',
-  },
-  errorBox: { marginBottom: theme.spacing.md },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: theme.spacing.xl },
-  centerContainer: {
-    flex: 1,
-    padding: theme.spacing.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.main,
-  },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
-  centerButton: { alignSelf: 'center', minWidth: 200 },
-});

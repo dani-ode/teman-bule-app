@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -52,20 +52,20 @@ export const VerifyEmailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (verified) {
     return (
-      <View style={styles.centerContainer}>
-        <View style={styles.successIcon}>
+      <View className="flex-1 p-6 justify-center items-center bg-background-main">
+        <View className="w-24 h-24 rounded-full bg-[#e8f0e0] items-center justify-center mb-6">
           <Ionicons name="checkmark-circle" size={56} color={theme.colors.semantic.success} />
         </View>
-        <Text variant="title" weight="bold" style={styles.centerTitle}>
-          Email terverifikasi
+        <Text variant="title" weight="bold" align="center" className="mb-2">
+          Email verified
         </Text>
-        <Text variant="body" color="secondary" style={styles.centerBody}>
-          Akun Anda aktif. Silakan masuk.
+        <Text variant="body" color="secondary" align="center" className="mb-4">
+          Your account is active. Please sign in.
         </Text>
         <Button
-          label="Masuk"
+          label="Sign In"
           onPress={() => navigation.navigate('Login')}
-          style={styles.centerButton}
+          className="self-center min-w-[200px]"
           icon="log-in-outline"
         />
       </View>
@@ -73,60 +73,63 @@ export const VerifyEmailScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerSection}>
-        <View style={styles.iconCircle}>
+    <ScrollView
+      contentContainerClassName="p-6 flex-grow justify-center bg-background-main"
+      keyboardShouldPersistTaps="handled"
+    >
+      <View className="items-center mb-8">
+        <View className="w-[72px] h-[72px] rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
           <Ionicons name="shield-checkmark-outline" size={36} color={theme.colors.text.inverse} />
         </View>
-        <Text variant="heading" weight="bold" style={styles.title}>
-          Verifikasi email
+        <Text variant="heading" weight="bold" className="mb-1 text-primary-700">
+          Verify email
         </Text>
-        <Text variant="body" color="secondary" style={styles.subtitle}>
-          Masukkan token verifikasi dari email Anda
+        <Text variant="body" color="secondary" align="center" className="mb-6">
+          Enter the verification token from your email
         </Text>
       </View>
 
       {error ? (
-        <View style={styles.errorBox}>
+        <View className="mb-3">
           <ErrorState message={error.message} requestId={error.requestId} />
         </View>
       ) : null}
 
       <FormField
-        label="Token verifikasi"
+        label="Verification token"
         value={token}
         onChangeText={setToken}
-        placeholder="Token dari email"
+        placeholder="Token from email"
         autoCapitalize="none"
         editable={!submitting}
         icon="key-outline"
       />
 
       <Button
-        label="Verifikasi"
+        label="Verify"
         onPress={handleVerify}
         disabled={token.trim().length === 0 || submitting}
         loading={submitting}
         icon="checkmark-outline"
       />
 
-      <View style={styles.divider} />
+      <View className="h-px bg-khaki-300 my-6" />
 
-      <Text variant="subtitle" weight="semibold" style={styles.resendTitle}>
-        Tidak menerima email?
+      <Text variant="subtitle" weight="semibold" className="mb-3">
+        Didn't receive the email?
       </Text>
       <FormField
         label="Email"
         value={email}
         onChangeText={setEmail}
-        placeholder="nama@email.com"
+        placeholder="name@email.com"
         keyboardType="email-address"
         autoCapitalize="none"
         editable={!resending}
         icon="mail-outline"
       />
       <Button
-        label={resent ? 'Tautan terkirim ulang' : 'Kirim ulang verifikasi'}
+        label={resent ? 'Link resent' : 'Resend verification'}
         onPress={handleResend}
         disabled={email.trim().length === 0 || resending || resent}
         loading={resending}
@@ -136,39 +139,3 @@ export const VerifyEmailScreen: React.FC<Props> = ({ navigation, route }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  title: { marginBottom: theme.spacing.xs, color: theme.colors.primary[700] },
-  subtitle: { marginBottom: theme.spacing.xl, textAlign: 'center' },
-  errorBox: { marginBottom: theme.spacing.md },
-  divider: { height: 1, backgroundColor: theme.colors.khaki[300], marginVertical: theme.spacing.xl },
-  resendTitle: { marginBottom: theme.spacing.md },
-  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.main },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#e8f0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
-  centerButton: { alignSelf: 'center', minWidth: 200 },
-});

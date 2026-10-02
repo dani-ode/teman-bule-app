@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -27,7 +27,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleSubmit = async () => {
     setFieldError(null);
     if (password !== confirm) {
-      setFieldError('Konfirmasi kata sandi tidak cocok.');
+      setFieldError('Password confirmation does not match.');
       return;
     }
     if (!canSubmit) return;
@@ -45,20 +45,20 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (done) {
     return (
-      <View style={styles.centerContainer}>
-        <View style={styles.successIcon}>
+      <View className="flex-1 p-6 justify-center items-center bg-background-main">
+        <View className="w-24 h-24 rounded-full bg-[#e8f0e0] items-center justify-center mb-6">
           <Ionicons name="checkmark-circle" size={56} color={theme.colors.semantic.success} />
         </View>
-        <Text variant="title" weight="bold" style={styles.centerTitle}>
-          Kata sandi diperbarui
+        <Text variant="title" weight="bold" align="center" className="mb-2">
+          Password updated
         </Text>
-        <Text variant="body" color="secondary" style={styles.centerBody}>
-          Silakan masuk dengan kata sandi baru Anda.
+        <Text variant="body" color="secondary" align="center" className="mb-4">
+          Please sign in with your new password.
         </Text>
         <Button
-          label="Masuk"
+          label="Sign In"
           onPress={() => navigation.navigate('Login')}
-          style={styles.centerButton}
+          className="self-center min-w-[200px]"
           icon="log-in-outline"
         />
       </View>
@@ -66,46 +66,49 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerSection}>
-        <View style={styles.iconCircle}>
+    <ScrollView
+      contentContainerClassName="p-6 flex-grow justify-center bg-background-main"
+      keyboardShouldPersistTaps="handled"
+    >
+      <View className="items-center mb-8">
+        <View className="w-[72px] h-[72px] rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
           <Ionicons name="lock-open-outline" size={36} color={theme.colors.text.inverse} />
         </View>
-        <Text variant="heading" weight="bold" style={styles.title}>
-          Atur ulang kata sandi
+        <Text variant="heading" weight="bold" className="mb-6 text-primary-700">
+          Reset password
         </Text>
       </View>
 
       {error ? (
-        <View style={styles.errorBox}>
+        <View className="mb-3">
           <ErrorState message={error.message} requestId={error.requestId} />
         </View>
       ) : null}
 
       <FormField
-        label="Token reset"
+        label="Reset token"
         value={token}
         onChangeText={setToken}
-        placeholder="Token dari email"
+        placeholder="Token from email"
         autoCapitalize="none"
         editable={!submitting}
         icon="key-outline"
       />
       <FormField
-        label="Kata sandi baru (min. 8 karakter)"
+        label="New password (min. 8 characters)"
         value={password}
         onChangeText={setPassword}
-        placeholder="Kata sandi baru"
+        placeholder="New password"
         secureTextEntry
         autoCapitalize="none"
         editable={!submitting}
         icon="lock-closed-outline"
       />
       <FormField
-        label="Konfirmasi kata sandi baru"
+        label="Confirm new password"
         value={confirm}
         onChangeText={setConfirm}
-        placeholder="Ulangi kata sandi baru"
+        placeholder="Repeat your new password"
         secureTextEntry
         autoCapitalize="none"
         editable={!submitting}
@@ -114,7 +117,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
       />
 
       <Button
-        label="Simpan"
+        label="Save"
         onPress={handleSubmit}
         disabled={!canSubmit}
         loading={submitting}
@@ -123,36 +126,3 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { padding: theme.spacing.xl, flexGrow: 1, justifyContent: 'center', backgroundColor: theme.colors.background.main },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  title: { marginBottom: theme.spacing.xl, color: theme.colors.primary[700] },
-  errorBox: { marginBottom: theme.spacing.md },
-  centerContainer: { flex: 1, padding: theme.spacing.xl, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.main },
-  successIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#e8f0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  centerTitle: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  centerBody: { textAlign: 'center', marginBottom: theme.spacing.lg },
-  centerButton: { alignSelf: 'center', minWidth: 200 },
-});

@@ -3,6 +3,13 @@ import { envConfig } from '@/config/env.config';
 import { ClientError, ContractError } from '@/core/errors/ClientError';
 import { wireErrorEnvelopeSchema } from '@/core/types/wire.types';
 import { AccessTokenStore } from '@/core/auth/AccessTokenStore';
+import {
+  HttpLogger,
+  buildRequestLogRecord,
+  buildResponseLogRecord,
+  consoleHttpLogger,
+  extractWireCorrelation,
+} from './httpLogger';
 
 /**
  * Authenticated HTTP transport.
@@ -12,6 +19,8 @@ import { AccessTokenStore } from '@/core/auth/AccessTokenStore';
  * - Single coordinated token refresh on 401 (single-flight): one refresh
  *   promise shared by concurrent requests; safe idempotent replay only.
  * - Timeout does not imply no side effect; callers reconcile unknown outcomes.
+ * - Development-only request/response logging via HttpLogger with mandatory
+ *   redaction of tokens, passwords, BYOK keys and signed URLs (R05).
  */
 
 export interface RequestOptions {
@@ -65,6 +74,7 @@ export class HttpTransport {
   constructor(
     private readonly tokenStore: AccessTokenStore,
     private readonly session: SessionActions,
+    private readonly logger: HttpLogger = consoleHttpLogger,
   ) {}
 
   private buildUrl(path: string): string {
@@ -129,12 +139,30 @@ export class HttpTransport {
   }
 
   public async request(options: RequestOptions): Promise<unknown> {
+    const startedAt = Date.now();
+    const requestRecord = buildRequestLogRecord({
+      method: options.method,
+      path: options.path,
+      idempotencyKey: options.idempotencyKey,
+      authorized: !options.anonymous && this.tokenStore.get() !== null,
+      body: options.body,
+    });
+    this.logger.logRequest(requestRecord);
+
     let accessToken = this.tokenStore.get();
     let response: Response;
     try {
       response = await this.execute(options, accessToken);
     } catch (error) {
-      throw this.mapTransportError(error);
+      const mapped = this.mapTransportError(error);
+      this.logger.logTransportError({
+        seq: requestRecord.seq,
+        method: options.method,
+        path: options.path,
+        elapsedMs: Date.now() - startedAt,
+        errorCode: mapped.code,
+      });
+      throw mapped;
     }
 
     // One coordinated refresh on 401; never an unbounded auth retry loop.
@@ -151,18 +179,31 @@ export class HttpTransport {
         throw new ClientError({
           kind: 'unauthorized',
           code: 'ERR_SESSION_EXPIRED',
-          message: 'Sesi berakhir. Silakan masuk kembali.',
+          message: 'Your session has expired. Please sign in again.',
           httpStatus: 401,
         });
       }
       try {
         response = await this.execute(options, accessToken);
       } catch (error) {
-        throw this.mapTransportError(error);
+        const mapped = this.mapTransportError(error);
+        this.logger.logTransportError({
+          seq: requestRecord.seq,
+          method: options.method,
+          path: options.path,
+          elapsedMs: Date.now() - startedAt,
+          errorCode: mapped.code,
+        });
+        throw mapped;
       }
     }
 
-    return this.decodeResponse(response);
+    return this.decodeResponse(response, {
+      seq: requestRecord.seq,
+      method: options.method,
+      path: options.path,
+      startedAt,
+    });
   }
 
   private mapTransportError(error: unknown): ClientError {
@@ -171,19 +212,45 @@ export class HttpTransport {
       return new ClientError({
         kind: 'timeout',
         code: 'ERR_REQUEST_TIMEOUT',
-        message: 'Permintaan melebihi batas waktu. Periksa koneksi Anda.',
+        message: 'The request timed out. Please check your connection.',
       });
     }
     return new ClientError({
       kind: 'network',
       code: 'ERR_NETWORK',
-      message: 'Tidak dapat terhubung ke server. Periksa koneksi Anda.',
+      message: 'Unable to connect to the server. Please check your connection.',
     });
   }
 
-  private async decodeResponse(response: Response): Promise<unknown> {
+  private async decodeResponse(
+    response: Response,
+    logContext: {
+      seq: number;
+      method: string;
+      path: string;
+      startedAt: number;
+    },
+  ): Promise<unknown> {
+    const elapsedMs = Date.now() - logContext.startedAt;
+    const logBody = (rawJson: unknown) => {
+      const { requestId, errorCode } = extractWireCorrelation(rawJson);
+      this.logger.logResponse(
+        buildResponseLogRecord({
+          seq: logContext.seq,
+          method: logContext.method,
+          path: logContext.path,
+          status: response.status,
+          elapsedMs,
+          requestId,
+          errorCode,
+          body: rawJson,
+        }),
+      );
+    };
+
     // Successful mutation may return 204 without a JSON body.
     if (response.status === 204) {
+      logBody(null);
       return null;
     }
 
@@ -193,11 +260,14 @@ export class HttpTransport {
       try {
         rawJson = JSON.parse(rawText);
       } catch {
+        logBody(null);
         throw new ContractError('Server returned a non-JSON payload.', [
           { status: response.status },
         ]);
       }
     }
+
+    logBody(rawJson);
 
     if (!response.ok) {
       const parsed = wireErrorEnvelopeSchema.safeParse(rawJson);
@@ -215,7 +285,7 @@ export class HttpTransport {
       throw new ClientError({
         kind: statusToKind(response.status),
         code: 'ERR_UNSTRUCTURED_ERROR',
-        message: 'Terjadi kesalahan yang tidak dikenali.',
+        message: 'An unrecognized error occurred.',
         httpStatus: response.status,
       });
     }

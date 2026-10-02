@@ -19,12 +19,12 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'PlanSelection'>;
 const PLAN_INFO: Record<PlanCode, { title: string; description: string; icon: keyof typeof Ionicons.glyphMap }> = {
   vip: {
     title: 'VIP',
-    description: 'Bayar dengan token aplikasi (top-up). LLM/STT dibiayai wallet sesuai tarif.',
+    description: 'Pay with in-app tokens (top-up). LLM/STT usage is billed to your wallet at the applicable rates.',
     icon: 'diamond-outline',
   },
   advance: {
     title: 'Advance',
-    description: 'Gunakan API key Anda sendiri (BYOK) untuk LLM dan STT. TTS & embedding oleh platform.',
+    description: 'Use your own API key (BYOK) for LLM and STT. TTS & embeddings are provided by the platform.',
     icon: 'key-outline',
   },
 };
@@ -49,7 +49,7 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
   if (plan.isLoading) {
     return (
       <View style={styles.center}>
-        <LoadingSpinner message="Memuat plan..." />
+        <LoadingSpinner message="Loading plan..." />
       </View>
     );
   }
@@ -66,11 +66,11 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
           <Ionicons name="diamond-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.title}>
-          Pilih plan
+          Choose a plan
         </Text>
         <Text variant="body" color="secondary" style={styles.subtitle}>
-          Plan menentukan cara pembiayaan pekerjaan AI. Mengganti plan tidak menghapus saldo atau
-          progres Anda.
+          Your plan determines how AI work is billed. Switching plans does not remove your balance or
+          progress.
         </Text>
       </View>
 
@@ -86,7 +86,7 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
           onPress={() => void handleSelect(code)}
           accessibilityRole="button"
           accessibilityState={{ selected: plan.data?.planCode === code }}
-          accessibilityLabel={`Pilih plan ${PLAN_INFO[code].title}`}
+          accessibilityLabel={`Select ${PLAN_INFO[code].title} plan`}
           disabled={selectPlan.isPending}
         >
           <Card
@@ -112,7 +112,7 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
                   {PLAN_INFO[code].description}
                 </Text>
               </View>
-              {plan.data?.planCode === code ? <Badge label="Aktif" variant="success" /> : null}
+              {plan.data?.planCode === code ? <Badge label="Active" variant="success" /> : null}
             </View>
           </Card>
         </Pressable>
@@ -122,7 +122,7 @@ export const PlanSelectionScreen: React.FC<Props> = () => {
         <View style={styles.savingRow}>
           <LoadingSpinner size="small" />
           <Text variant="caption" color="secondary" style={styles.saving}>
-            Menyimpan pilihan...
+            Saving selection...
           </Text>
         </View>
       ) : null}

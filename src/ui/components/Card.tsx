@@ -1,51 +1,36 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { theme } from '../theme';
+import { View, ViewStyle } from 'react-native';
 
 export type CardVariant = 'default' | 'elevated' | 'outlined' | 'accent';
 
 export interface CardProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  className?: string;
   variant?: CardVariant;
 }
+
+const variantClasses: Record<CardVariant, string> = {
+  default: 'border border-khaki-200',
+  elevated: 'shadow-card',
+  outlined: 'border-[1.5px] border-primary-300 bg-primary-50',
+  accent: 'border-[1.5px] border-accent-300 bg-accent-50',
+};
 
 export const Card: React.FC<CardProps> = ({
   children,
   style,
+  className,
   variant = 'default',
 }: CardProps) => {
   return (
-    <View style={[styles.base, variantStyles[variant], style]}>
+    <View
+      className={['bg-background-card rounded-lg p-4', variantClasses[variant], className ?? '']
+        .filter(Boolean)
+        .join(' ')}
+      style={style}
+    >
       {children}
     </View>
   );
 };
-
-const variantStyles: Record<CardVariant, ViewStyle> = {
-  default: {
-    borderWidth: 1,
-    borderColor: theme.colors.khaki[200],
-  },
-  elevated: {
-    ...theme.shadows.card,
-  },
-  outlined: {
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary[300],
-    backgroundColor: theme.colors.primary[50],
-  },
-  accent: {
-    borderWidth: 1.5,
-    borderColor: theme.colors.accent[300],
-    backgroundColor: theme.colors.accent[50],
-  },
-};
-
-const styles = StyleSheet.create({
-  base: {
-    backgroundColor: theme.colors.background.card,
-    borderRadius: theme.radii.lg,
-    padding: theme.spacing.lg,
-  },
-});

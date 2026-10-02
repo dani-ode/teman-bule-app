@@ -17,6 +17,7 @@ import { ChatHomeScreen } from '@/features/practice/screens/ChatHomeScreen';
 import { ConversationScreen } from '@/features/practice/screens/ConversationScreen';
 
 import { CallSetupScreen } from '@/features/call/screens/CallSetupScreen';
+import { ActiveCallScreen } from '@/features/call/screens/ActiveCallScreen';
 
 import {
   PodcastCreateScreen,
@@ -51,46 +52,51 @@ const screenOptions = {
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 export const HomeNavigator: React.FC = () => (
   <HomeStack.Navigator screenOptions={screenOptions}>
-    <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ title: 'Beranda' }} />
-    <HomeStack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ title: 'Kursus' }} />
-    <HomeStack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ title: 'Materi' }} />
+    <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
+    <HomeStack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ title: 'Course' }} />
+    <HomeStack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ title: 'Lesson' }} />
   </HomeStack.Navigator>
 );
 
 const ChatStack = createNativeStackNavigator<ChatStackParamList>();
 export const ChatNavigator: React.FC = () => (
   <ChatStack.Navigator screenOptions={screenOptions}>
-    <ChatStack.Screen name="ChatHome" component={ChatHomeScreen} options={{ title: 'Chat' }} />
-    <ChatStack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Percakapan' }} />
+    <ChatStack.Screen name="ChatHome" component={ChatHomeScreen} options={{ headerShown: false }} />
+    <ChatStack.Screen name="Conversation" component={ConversationScreen} options={{ headerShown: false }} />
   </ChatStack.Navigator>
 );
 
 const CallStack = createNativeStackNavigator<CallStackParamList>();
 export const CallNavigator: React.FC = () => (
   <CallStack.Navigator screenOptions={screenOptions}>
-    <CallStack.Screen name="CallSetup" component={CallSetupScreen} options={{ title: 'Panggilan' }} />
+    <CallStack.Screen name="CallSetup" component={CallSetupScreen} options={{ headerShown: false }} />
+    <CallStack.Screen
+      name="ActiveCall"
+      component={ActiveCallScreen}
+      options={{ headerShown: false, gestureEnabled: false }}
+    />
   </CallStack.Navigator>
 );
 
 const PodcastStack = createNativeStackNavigator<PodcastStackParamList>();
 export const PodcastNavigator: React.FC = () => (
   <PodcastStack.Navigator screenOptions={screenOptions}>
-    <PodcastStack.Screen name="PodcastLibrary" component={PodcastLibraryScreen} options={{ title: 'Podcast' }} />
-    <PodcastStack.Screen name="PodcastCreate" component={PodcastCreateScreen} options={{ title: 'Podcast Baru' }} />
-    <PodcastStack.Screen name="PodcastDetail" component={PodcastDetailScreen} options={{ title: 'Detail Podcast' }} />
+    <PodcastStack.Screen name="PodcastLibrary" component={PodcastLibraryScreen} options={{ headerShown: false }} />
+    <PodcastStack.Screen name="PodcastCreate" component={PodcastCreateScreen} options={{ title: 'New Podcast' }} />
+    <PodcastStack.Screen name="PodcastDetail" component={PodcastDetailScreen} options={{ title: 'Podcast Details' }} />
   </PodcastStack.Navigator>
 );
 
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 export const ProfileNavigator: React.FC = () => (
   <ProfileStack.Navigator screenOptions={screenOptions}>
-    <ProfileStack.Screen name="ProfileMain" component={ProfileMainScreen} options={{ title: 'Profil' }} />
-    <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profil' }} />
+    <ProfileStack.Screen name="ProfileMain" component={ProfileMainScreen} options={{ headerShown: false }} />
+    <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
     <ProfileStack.Screen name="PlanSelection" component={PlanSelectionScreen} options={{ title: 'Plan' }} />
     <ProfileStack.Screen name="Wallet" component={WalletScreen} options={{ title: 'Wallet' }} />
-    <ProfileStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: 'Pengaturan AI' }} />
+    <ProfileStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: 'AI Settings' }} />
     <ProfileStack.Screen name="Vocabulary" component={VocabularyScreen} options={{ title: 'Vocabulary' }} />
     <ProfileStack.Screen name="Toefl" component={ToeflScreen} options={{ title: 'TOEFL' }} />
-    <ProfileStack.Screen name="AccountSecurity" component={AccountSecurityScreen} options={{ title: 'Keamanan Akun' }} />
+    <ProfileStack.Screen name="AccountSecurity" component={AccountSecurityScreen} options={{ title: 'Account Security' }} />
   </ProfileStack.Navigator>
 );

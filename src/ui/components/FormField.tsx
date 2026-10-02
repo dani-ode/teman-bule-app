@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { theme } from '../theme';
@@ -31,13 +31,21 @@ export const FormField: React.FC<FormFieldProps> = ({
   icon,
   accessibilityLabel,
 }) => (
-  <View style={styles.container}>
-    <Text variant="caption" weight="semibold" color="secondary" style={styles.label}>
+  <View className="mb-3">
+    <Text variant="caption" weight="semibold" color="secondary" className="mb-1">
       {label}
     </Text>
-    <View style={[styles.inputWrapper, error ? styles.inputError : null, !editable && styles.inputDisabled]}>
+    <View
+      className={[
+        'flex-row items-center bg-background-card border border-khaki-200 rounded-md min-h-[48px]',
+        error ? 'border-danger' : '',
+        !editable ? 'bg-khaki-100 opacity-70' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {icon ? (
-        <Ionicons name={icon} size={18} color={theme.colors.text.muted} style={styles.inputIcon} />
+        <Ionicons name={icon} size={18} color={theme.colors.text.muted} style={{ marginLeft: theme.spacing.md }} />
       ) : null}
       <TextInput
         value={value}
@@ -50,64 +58,21 @@ export const FormField: React.FC<FormFieldProps> = ({
         autoCorrect={false}
         editable={editable}
         accessibilityLabel={accessibilityLabel ?? label}
-        style={[styles.input, icon ? styles.inputWithIcon : null]}
+        className={[
+          'flex-1 px-3 py-2 text-base text-ink-primary min-h-[48px]',
+          icon ? 'pl-2' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
       />
     </View>
     {error ? (
-      <View style={styles.errorRow}>
+      <View className="flex-row items-center mt-1 gap-1">
         <Ionicons name="alert-circle" size={14} color={theme.colors.semantic.error} />
-        <Text variant="caption" style={styles.error} accessibilityLiveRegion="polite">
+        <Text variant="caption" className="text-danger" accessibilityLiveRegion="polite">
           {error}
         </Text>
       </View>
     ) : null}
   </View>
 );
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    marginBottom: theme.spacing.xs,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.card,
-    borderWidth: 1,
-    borderColor: theme.colors.khaki[200],
-    borderRadius: theme.radii.md,
-    minHeight: 48,
-  },
-  inputIcon: {
-    marginLeft: theme.spacing.md,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text.primary,
-    minHeight: 48,
-  },
-  inputWithIcon: {
-    paddingLeft: theme.spacing.sm,
-  },
-  inputError: {
-    borderColor: theme.colors.semantic.error,
-  },
-  inputDisabled: {
-    backgroundColor: theme.colors.khaki[100],
-    opacity: 0.7,
-  },
-  errorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.spacing.xs,
-    gap: 4,
-  },
-  error: {
-    color: theme.colors.semantic.error,
-  },
-});

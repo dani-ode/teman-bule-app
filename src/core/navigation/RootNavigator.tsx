@@ -19,8 +19,8 @@ export const RootNavigator: React.FC = () => {
 
   if (state.status === 'bootstrapping') {
     return (
-      <View style={styles.bootstrap} accessibilityLabel="Memuat aplikasi">
-        <LoadingSpinner message="Memuat..." />
+      <View style={styles.bootstrap} accessibilityLabel="Loading app">
+        <LoadingSpinner message="Loading..." />
       </View>
     );
   }

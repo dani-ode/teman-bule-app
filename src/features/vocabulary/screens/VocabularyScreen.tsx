@@ -59,22 +59,22 @@ export const VocabularyScreen: React.FC<Props> = () => {
         <View style={styles.formHeader}>
           <Ionicons name="bookmark-outline" size={20} color={theme.colors.primary[600]} />
           <Text variant="subtitle" weight="bold" style={styles.formTitle}>
-            Simpan kata baru
+            Save new word
           </Text>
         </View>
         <FormField
-          label="Kata"
+          label="Word"
           value={lemma}
           onChangeText={setLemma}
-          placeholder="Lemma (Inggris)"
+          placeholder="Lemma (English)"
           autoCapitalize="none"
           icon="text-outline"
         />
         <FormField
-          label="Definisi (opsional)"
+          label="Definition (optional)"
           value={definition}
           onChangeText={setDefinition}
-          placeholder="Definisi singkat"
+          placeholder="Short definition"
           icon="document-text-outline"
         />
         {formError ? (
@@ -86,7 +86,7 @@ export const VocabularyScreen: React.FC<Props> = () => {
           </View>
         ) : null}
         <Button
-          label="Simpan"
+          label="Save"
           onPress={handleSave}
           disabled={lemma.trim().length === 0 || saveEntry.isPending}
           loading={saveEntry.isPending}
@@ -96,7 +96,7 @@ export const VocabularyScreen: React.FC<Props> = () => {
 
       {/* Vocabulary List */}
       {vocabulary.isLoading ? (
-        <LoadingSpinner message="Memuat vocabulary..." />
+        <LoadingSpinner message="Loading vocabulary..." />
       ) : vocabulary.isError ? (
         <ErrorState
           message={userMessageForError(vocabulary.error).message}
@@ -105,8 +105,8 @@ export const VocabularyScreen: React.FC<Props> = () => {
         />
       ) : (vocabulary.data ?? []).length === 0 ? (
         <EmptyState
-          title="Belum ada kata"
-          message="Kata yang Anda simpan akan tampil di sini."
+          title="No words yet"
+          message="Words you save will appear here."
           icon="book-outline"
         />
       ) : (
@@ -134,7 +134,7 @@ export const VocabularyScreen: React.FC<Props> = () => {
                   ) : null}
                   <View style={styles.badgeRow}>
                     <Badge label={item.state} variant="neutral" />
-                    <Badge label={`Skor ${item.masteryScore}`} variant="primary" style={styles.badgeSpacer} />
+                    <Badge label={`Score ${item.masteryScore}`} variant="primary" style={styles.badgeSpacer} />
                   </View>
                 </View>
               </View>
@@ -145,7 +145,7 @@ export const VocabularyScreen: React.FC<Props> = () => {
                     onPress={() => recordReview.mutate({ entryId: item.entryId, result: r })}
                     disabled={recordReview.isPending}
                     accessibilityRole="button"
-                    accessibilityLabel={`Review ${r} untuk ${item.lemma}`}
+                    accessibilityLabel={`Mark ${item.lemma} as ${r}`}
                     style={[
                       styles.reviewButton,
                       { borderColor: reviewColors[r] },

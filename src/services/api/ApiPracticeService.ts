@@ -4,14 +4,18 @@ import {
   AgentCode,
   AgentPersona,
   ConversationMessage,
+  CreatedPracticeSession,
   PracticeCategory,
   PracticeSession,
+  PracticeSessionListItem,
 } from '@/domain/practice/practice.types';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
 import {
   agentPersonaResponseSchema,
+  createSessionResponseSchema,
   messageResponseSchema,
   practiceCategoryResponseSchema,
+  sessionListItemResponseSchema,
   sessionResponseSchema,
 } from './dto/domain.dto';
 
@@ -23,12 +27,16 @@ export class ApiPracticeService implements IPracticeService {
     kind: string;
     state: string;
     started_at: string;
+    agent_code?: string | null;
+    category_id?: string | null;
   }): PracticeSession {
     return {
       sessionId: data.session_id,
       kind: data.kind,
       state: data.state,
       startedAt: data.started_at,
+      agentCode: data.agent_code ?? null,
+      categoryId: data.category_id ?? null,
     };
   }
 
@@ -39,6 +47,10 @@ export class ApiPracticeService implements IPracticeService {
     sequence: number;
     terminal_state: string;
     created_at: string;
+    text?: string;
+    modality?: string;
+    audio_url?: string | null;
+    audio_duration_ms?: number | null;
   }): ConversationMessage {
     return {
       messageId: data.message_id,
@@ -47,22 +59,34 @@ export class ApiPracticeService implements IPracticeService {
       sequence: data.sequence,
       terminalState: data.terminal_state,
       createdAt: data.created_at,
+      text: data.text,
+      modality: data.modality,
+      audioUrl: data.audio_url ?? null,
+      audioDurationMs: data.audio_duration_ms ?? null,
     };
   }
 
   public async createSession(input: {
     agentCode: AgentCode;
     categoryId: string;
-  }): Promise<PracticeSession> {
+  }): Promise<CreatedPracticeSession> {
     const data = decode(
-      sessionResponseSchema,
+      createSessionResponseSchema,
       await this.http.request({
         method: 'POST',
         path: '/practice/sessions',
         body: { agent_code: input.agentCode, category_id: input.categoryId },
       }),
     );
-    return this.mapSession(data);
+    return {
+      sessionId: data.session_id,
+      kind: data.kind,
+      state: data.state,
+      startedAt: data.started_at,
+      agentCode: data.agent_code,
+      categoryId: data.category_id,
+      firstMessage: data.first_message ? this.mapMessage(data.first_message) : null,
+    };
   }
 
   public async getSession(sessionId: string): Promise<PracticeSession> {
@@ -96,7 +120,7 @@ export class ApiPracticeService implements IPracticeService {
       z.array(agentPersonaResponseSchema),
       await this.http.request({
         method: 'GET',
-        path: `/plans/agents?limit=${limit}`,
+        path: `/me/agents?limit=${limit}`,
       }),
     );
     return data.map((a) => ({
@@ -144,5 +168,40 @@ export class ApiPracticeService implements IPracticeService {
       }),
     );
     return this.mapSession(data);
+  }
+
+  public async listSessions(input?: {
+    categoryId?: string;
+    agentCode?: AgentCode;
+    state?: 'active' | 'completed' | 'abandoned';
+    limit?: number;
+  }): Promise<PracticeSessionListItem[]> {
+    const params = new URLSearchParams();
+    if (input?.categoryId) params.append('category_id', input.categoryId);
+    if (input?.agentCode) params.append('agent_code', input.agentCode);
+    if (input?.state) params.append('state', input.state);
+    if (input?.limit) params.append('limit', String(input.limit));
+    const query = params.toString();
+    const path = `/practice/sessions${query ? `?${query}` : ''}`;
+    const data = decode(
+      z.array(sessionListItemResponseSchema),
+      await this.http.request({ method: 'GET', path }),
+    );
+    return data.map((s) => ({
+      sessionId: s.session_id,
+      kind: s.kind,
+      state: s.state,
+      categoryId: s.category_id,
+      agentCode: s.agent_code,
+      startedAt: s.started_at,
+      endedAt: s.ended_at,
+    }));
+  }
+
+  public async deleteSession(sessionId: string): Promise<void> {
+    await this.http.request({
+      method: 'DELETE',
+      path: `/practice/sessions/${sessionId}`,
+    });
   }
 }

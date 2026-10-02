@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, View } from 'react-native';
+import { Pressable, ActivityIndicator, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { Text } from './Text';
@@ -16,72 +16,31 @@ export interface ButtonProps {
   iconPosition?: 'left' | 'right';
   size?: 'sm' | 'md' | 'lg';
   style?: ViewStyle;
-  labelStyle?: TextStyle;
+  className?: string;
+  labelClassName?: string;
   accessibilityLabel?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  label,
-  onPress,
-  variant = 'primary',
-  disabled = false,
-  loading = false,
-  icon,
-  iconPosition = 'left',
-  size = 'md',
-  style,
-  labelStyle,
-  accessibilityLabel,
-}: ButtonProps) => {
-  const isInteractive = !disabled && !loading;
-  const iconColor = getIconColor(variant);
-  const iconSize = size === 'sm' ? 16 : size === 'lg' ? 22 : 18;
+const sizeClasses: Record<NonNullable<ButtonProps['size']>, string> = {
+  sm: 'py-2 px-3 rounded-sm',
+  md: 'py-3 px-6 rounded-md',
+  lg: 'py-4 px-8 rounded-lg',
+};
 
-  return (
-    <Pressable
-      onPress={isInteractive ? onPress : undefined}
-      disabled={!isInteractive}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || label}
-      accessibilityState={{ disabled: !isInteractive, busy: loading }}
-      style={({ pressed }) => [
-        styles.base,
-        sizeStyles[size],
-        variantStyles[variant],
-        pressed && isInteractive && styles.pressed,
-        disabled && styles.disabled,
-        style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' || variant === 'danger' ? theme.colors.text.inverse : theme.colors.primary[600]}
-          size="small"
-        />
-      ) : (
-        <View style={styles.contentRow}>
-          {icon && iconPosition === 'left' ? (
-            <Ionicons name={icon} size={iconSize} color={iconColor} style={styles.iconLeft} />
-          ) : null}
-          <Text
-            variant={size === 'sm' ? 'caption' : 'subtitle'}
-            weight="semibold"
-            style={[
-              variant === 'primary' || variant === 'danger' ? styles.labelPrimary : styles.labelSecondary,
-              variant === 'ghost' && styles.labelGhost,
-              labelStyle,
-            ]}
-          >
-            {label}
-          </Text>
-          {icon && iconPosition === 'right' ? (
-            <Ionicons name={icon} size={iconSize} color={iconColor} style={styles.iconRight} />
-          ) : null}
-        </View>
-      )}
-    </Pressable>
-  );
+const variantClasses: Record<ButtonVariant, string> = {
+  primary: 'bg-primary-600',
+  secondary: 'bg-primary-100',
+  outline: 'bg-transparent border-[1.5px] border-primary-600',
+  ghost: 'bg-transparent',
+  danger: 'bg-danger',
+};
+
+const labelColorClasses: Record<ButtonVariant, string> = {
+  primary: 'text-ink-inverse',
+  secondary: 'text-primary-700',
+  outline: 'text-primary-700',
+  ghost: 'text-ink-secondary',
+  danger: 'text-ink-inverse',
 };
 
 function getIconColor(variant: ButtonVariant): string {
@@ -98,75 +57,70 @@ function getIconColor(variant: ButtonVariant): string {
   }
 }
 
-const variantStyles: Record<ButtonVariant, ViewStyle> = {
-  primary: {
-    backgroundColor: theme.colors.primary[600],
-  },
-  secondary: {
-    backgroundColor: theme.colors.primary[100],
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary[600],
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: theme.colors.semantic.error,
-  },
-};
+export const Button: React.FC<ButtonProps> = ({
+  label,
+  onPress,
+  variant = 'primary',
+  disabled = false,
+  loading = false,
+  icon,
+  iconPosition = 'left',
+  size = 'md',
+  style,
+  className,
+  labelClassName,
+  accessibilityLabel,
+}: ButtonProps) => {
+  const isInteractive = !disabled && !loading;
+  const iconColor = getIconColor(variant);
+  const iconSize = size === 'sm' ? 16 : size === 'lg' ? 22 : 18;
 
-const sizeStyles: Record<string, ViewStyle> = {
-  sm: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-  },
-  md: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.radii.md,
-  },
-  lg: {
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xxl,
-    borderRadius: theme.radii.lg,
-  },
-};
+  const containerClasses = [
+    'flex-row items-center justify-center',
+    sizeClasses[size],
+    variantClasses[variant],
+    disabled ? 'opacity-50' : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  contentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  labelPrimary: {
-    color: theme.colors.text.inverse,
-  },
-  labelSecondary: {
-    color: theme.colors.primary[700],
-  },
-  labelGhost: {
-    color: theme.colors.text.secondary,
-  },
-  iconLeft: {
-    marginRight: theme.spacing.sm,
-  },
-  iconRight: {
-    marginLeft: theme.spacing.sm,
-  },
-});
+  return (
+    <Pressable
+      onPress={isInteractive ? onPress : undefined}
+      disabled={!isInteractive}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityState={{ disabled: !isInteractive, busy: loading }}
+      className={containerClasses}
+      style={({ pressed }) => [
+        pressed && isInteractive ? { opacity: 0.85, transform: [{ scale: 0.98 }] } : null,
+        style,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'danger' ? theme.colors.text.inverse : theme.colors.primary[600]}
+          size="small"
+        />
+      ) : (
+        <View className="flex-row items-center justify-center">
+          {icon && iconPosition === 'left' ? (
+            <Ionicons name={icon} size={iconSize} color={iconColor} style={{ marginRight: theme.spacing.sm }} />
+          ) : null}
+          <Text
+            variant={size === 'sm' ? 'caption' : 'subtitle'}
+            weight="semibold"
+            className={[labelColorClasses[variant], labelClassName ?? ''].filter(Boolean).join(' ')}
+          >
+            {label}
+          </Text>
+          {icon && iconPosition === 'right' ? (
+            <Ionicons name={icon} size={iconSize} color={iconColor} style={{ marginLeft: theme.spacing.sm }} />
+          ) : null}
+        </View>
+      )}
+    </Pressable>
+  );
+};

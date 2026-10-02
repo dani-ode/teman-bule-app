@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { ProfileStackParamList } from '@/core/navigation/types';
@@ -31,66 +32,67 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
   const menu: MenuItem[] = [
     {
       key: 'edit',
-      label: 'Edit profil',
-      description: 'Nama tampilan dan preferensi',
+      label: 'Edit Profile',
+      description: 'Display name and preferences',
       icon: 'person-outline',
       onPress: () => navigation.navigate('EditProfile'),
     },
     {
       key: 'plan',
       label: 'Plan',
-      description: 'VIP atau Advance (BYOK)',
+      description: 'VIP or Advance (BYOK)',
       icon: 'diamond-outline',
       onPress: () => navigation.navigate('PlanSelection'),
     },
     {
       key: 'wallet',
       label: 'Wallet',
-      description: 'Saldo token dan riwayat',
+      description: 'Token balance and history',
       icon: 'wallet-outline',
       onPress: () => navigation.navigate('Wallet'),
     },
     {
       key: 'ai',
-      label: 'Pengaturan AI',
-      description: 'Kredensial BYOK dan pilihan model',
+      label: 'AI Settings',
+      description: 'BYOK credentials and model selection',
       icon: 'hardware-chip-outline',
       onPress: () => navigation.navigate('AiSettings'),
     },
     {
       key: 'vocab',
       label: 'Vocabulary',
-      description: 'Kata tersimpan dan review',
+      description: 'Saved words and review',
       icon: 'book-outline',
       onPress: () => navigation.navigate('Vocabulary'),
     },
     {
       key: 'toefl',
       label: 'TOEFL',
-      description: 'Simulasi dan riwayat attempt',
+      description: 'Simulations and attempt history',
       icon: 'school-outline',
       onPress: () => navigation.navigate('Toefl'),
     },
     {
       key: 'security',
-      label: 'Keamanan akun',
-      description: 'Sesi, logout, hapus akun',
+      label: 'Account Security',
+      description: 'Sessions, sign out, delete account',
       icon: 'shield-checkmark-outline',
       onPress: () => navigation.navigate('AccountSecurity'),
     },
   ];
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <ScreenRefreshControl
-          onRefresh={async () => {
-            await Promise.all([profile.refetch(), plan.refetch(), wallet.refetch()]);
-          }}
-        />
-      }
-    >
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <ScreenRefreshControl
+            onRefresh={async () => {
+              await Promise.all([profile.refetch(), plan.refetch(), wallet.refetch()]);
+            }}
+          />
+        }
+      >
       {/* Profile Header */}
       <Card variant="elevated" style={styles.profileCard}>
         {profile.isLoading ? (
@@ -102,20 +104,20 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={styles.profileInfo}>
               <Text variant="title" weight="bold">
-                {profile.data?.displayName ?? 'Pelajar'}
+                {profile.data?.displayName ?? 'Learner'}
               </Text>
               <Text variant="body" color="secondary">
                 {profile.data?.email}
               </Text>
               <View style={styles.badgeRow}>
                 {plan.data ? (
-                  <Badge label={`Plan ${plan.data.planCode.toUpperCase()}`} variant="primary" />
+                  <Badge label={`${plan.data.planCode.toUpperCase()} Plan`} variant="primary" />
                 ) : (
-                  <Badge label="Plan belum dipilih" variant="warning" />
+                  <Badge label="No plan selected" variant="warning" />
                 )}
                 {wallet.data ? (
                   <Badge
-                    label={`${wallet.data.availableUnits} token`}
+                    label={`${wallet.data.availableUnits} tokens`}
                     variant="success"
                     style={styles.badgeSpacer}
                   />
@@ -158,21 +160,23 @@ export const ProfileMainScreen: React.FC<Props> = ({ navigation }) => {
       ))}
 
       {/* Logout */}
-      <Pressable onPress={() => void logout()} accessibilityRole="button" accessibilityLabel="Keluar">
+      <Pressable onPress={() => void logout()} accessibilityRole="button" accessibilityLabel="Sign Out">
         <Card variant="default" style={styles.logoutCard}>
           <View style={styles.logoutRow}>
             <Ionicons name="log-out-outline" size={22} color={theme.colors.semantic.error} />
             <Text variant="subtitle" weight="semibold" style={styles.logoutText}>
-              Keluar
+              Sign Out
             </Text>
           </View>
         </Card>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background.main },
   container: { padding: theme.spacing.lg },
   profileCard: { marginBottom: theme.spacing.lg },
   profileRow: {

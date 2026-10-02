@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -8,7 +8,6 @@ import { userMessageForError } from '@/core/errors/errorMessage';
 import { Text } from '@/ui/components/Text';
 import { Button } from '@/ui/components/Button';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
-import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OAuthReturn'>;
 
@@ -45,39 +44,25 @@ export const OAuthReturnScreen: React.FC<Props> = ({ navigation: _navigation }) 
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 p-6 justify-center items-center bg-background-main">
       {status === 'error' ? (
         <>
-          <Text variant="title" weight="bold" style={styles.title}>
-            Masuk dengan Google gagal
+          <Text variant="title" weight="bold" align="center" className="mb-2">
+            Sign in with Google failed
           </Text>
-          <Text variant="body" color="secondary" style={styles.body}>
+          <Text variant="body" color="secondary" align="center" className="mb-4">
             {error}
           </Text>
-          <Button label="Coba lagi" onPress={start} style={styles.button} />
+          <Button label="Try Again" onPress={start} className="min-w-[200px]" />
         </>
       ) : (
         <>
-          <LoadingSpinner message="Menghubungkan ke Google..." />
-          <Text variant="caption" color="secondary" style={styles.hint}>
-            Selesaikan proses di browser. Anda akan kembali ke aplikasi secara otomatis.
+          <LoadingSpinner message="Connecting to Google..." />
+          <Text variant="caption" color="secondary" align="center" className="mt-3">
+            Complete the process in the browser. You will return to the app automatically.
           </Text>
         </>
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: theme.spacing.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.main,
-  },
-  title: { marginBottom: theme.spacing.sm, textAlign: 'center' },
-  body: { textAlign: 'center', marginBottom: theme.spacing.lg },
-  button: { minWidth: 200 },
-  hint: { textAlign: 'center', marginTop: theme.spacing.md },
-});

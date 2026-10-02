@@ -42,7 +42,7 @@ export const AiSettingsScreen: React.FC<Props> = () => {
         baseUrl: baseUrl.trim().length > 0 ? baseUrl.trim() : undefined,
       });
       clearSecret();
-      setSuccess(`Kredensial terdaftar (status: ${credential.status}, sidik: ${credential.fingerprint}).`);
+      setSuccess(`Credential registered (status: ${credential.status}, fingerprint: ${credential.fingerprint}).`);
     } catch (err) {
       clearSecret();
       if (isClientError(err) && err.kind === 'unavailable') {
@@ -59,11 +59,11 @@ export const AiSettingsScreen: React.FC<Props> = () => {
     return (
       <View style={styles.center}>
         <UnavailableState
-          feature="Pengaturan AI (BYOK)"
-          message="Verifikasi kredensial provider belum dikonfigurasi di server (menunggu DEC-08)."
+          feature="AI Settings (BYOK)"
+          message="Provider credential verification is not yet configured on the server (pending DEC-08)."
         />
         <Button
-          label="Kembali"
+          label="Back"
           onPress={() => setUnavailable(false)}
           variant="secondary"
           style={styles.backButton}
@@ -80,10 +80,10 @@ export const AiSettingsScreen: React.FC<Props> = () => {
           <Ionicons name="hardware-chip-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.title}>
-          Pengaturan AI (BYOK)
+          AI Settings (BYOK)
         </Text>
         <Text variant="body" color="secondary" style={styles.subtitle}>
-          API key Anda dikirim sekali secara terenkripsi dan tidak pernah ditampilkan kembali.
+          Your API key is sent once over an encrypted connection and is never displayed again.
         </Text>
       </View>
 
@@ -102,10 +102,10 @@ export const AiSettingsScreen: React.FC<Props> = () => {
       ) : null}
 
       <FormField
-        label="ID provider"
+        label="Provider ID"
         value={providerId}
         onChangeText={setProviderId}
-        placeholder="ID provider dari katalog server"
+        placeholder="Provider ID from the server catalog"
         autoCapitalize="none"
         editable={!submitting}
         icon="cloud-outline"
@@ -114,28 +114,28 @@ export const AiSettingsScreen: React.FC<Props> = () => {
         label="API key"
         value={apiKey}
         onChangeText={setApiKey}
-        placeholder="Tempel API key Anda"
+        placeholder="Paste your API key"
         secureTextEntry
         autoCapitalize="none"
         editable={!submitting}
         icon="key-outline"
       />
       <FormField
-        label="Base URL (opsional)"
+        label="Base URL (optional)"
         value={baseUrl}
         onChangeText={setBaseUrl}
-        placeholder="https://... (kosongkan untuk endpoint bawaan)"
+        placeholder="https://... (leave empty for the default endpoint)"
         autoCapitalize="none"
         editable={!submitting}
         icon="link-outline"
       />
 
       <Button
-        label="Simpan kredensial"
+        label="Save credentials"
         onPress={handleRegister}
         disabled={providerId.trim().length === 0 || apiKey.trim().length < 8 || submitting}
         loading={submitting}
-        accessibilityLabel="Simpan kredensial BYOK"
+        accessibilityLabel="Save BYOK credentials"
         icon="save-outline"
         size="lg"
       />

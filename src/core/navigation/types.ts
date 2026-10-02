@@ -22,7 +22,7 @@ export type HomeStackParamList = {
 
 export type ChatStackParamList = {
   ChatHome: undefined;
-  Conversation: { sessionId: string; agentCode: 'elean' | 'willy' };
+  Conversation: { sessionId: string; agentCode: 'elean' | 'willy'; categoryId: string };
 };
 
 export type CallStackParamList = {

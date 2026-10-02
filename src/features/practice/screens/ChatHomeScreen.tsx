@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ChatStackParamList } from '@/core/navigation/types';
 import {
@@ -8,6 +9,7 @@ import {
   useAgentPersonas,
 } from '../hooks/usePractice';
 import { userMessageForError } from '@/core/errors/errorMessage';
+import { getServices } from '@/core/di/ServiceContainer';
 import { Text } from '@/ui/components/Text';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
@@ -15,7 +17,6 @@ import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
 import { AgentDropdown } from '../components/AgentDropdown';
 import { CategoryCard } from '../components/CategoryCard';
 import { AgentCode, PracticeCategory } from '@/domain/practice/practice.types';
-import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'ChatHome'>;
 
@@ -48,6 +49,23 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
     setError(null);
     setPendingCategoryId(category.categoryId);
     try {
+      // Buka session aktif terakhir untuk agent+kategori ini; jika tidak ada,
+      // buat session baru (backend memanggil workflow Langflow untuk chat pertama AI).
+      const practiceService = getServices().practiceService;
+      const existing = await practiceService.listSessions({
+        agentCode: effectiveAgentCode,
+        categoryId: category.categoryId,
+        state: 'active',
+        limit: 1,
+      });
+      if (existing.length > 0) {
+        navigation.navigate('Conversation', {
+          sessionId: existing[0].sessionId,
+          agentCode: effectiveAgentCode,
+          categoryId: category.categoryId,
+        });
+        return;
+      }
       const session = await createSession.mutateAsync({
         agentCode: effectiveAgentCode,
         categoryId: category.categoryId,
@@ -55,6 +73,7 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
       navigation.navigate('Conversation', {
         sessionId: session.sessionId,
         agentCode: effectiveAgentCode,
+        categoryId: category.categoryId,
       });
     } catch (err) {
       setError(userMessageForError(err));
@@ -67,11 +86,11 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
   const isError = categoriesQuery.isError || agentsQuery.isError;
 
   return (
-    <View style={styles.screen}>
-      {/* Header: dropdown persona di kiri atas */}
-      <View style={styles.header}>
-        <Text variant="caption" color="muted" style={styles.headerLabel}>
-          Persona AI
+    <SafeAreaView className="flex-1 bg-background-main" edges={['top']}>
+      {/* Header: label di kiri, dropdown persona di kanan */}
+      <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
+        <Text variant="caption" color="muted" className="uppercase tracking-wide">
+          AI Persona
         </Text>
         {agents.length > 0 ? (
           <AgentDropdown
@@ -81,22 +100,22 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
             disabled={createSession.isPending}
           />
         ) : (
-          <View style={styles.dropdownPlaceholder} />
+          <View className="h-9" />
         )}
       </View>
 
       {error ? (
-        <View style={styles.errorBox}>
+        <View className="mx-4 mb-2">
           <ErrorState message={error.message} requestId={error.requestId} />
         </View>
       ) : null}
 
       {/* Body: grid kategori */}
       {isLoading ? (
-        <LoadingSpinner message="Memuat kategori..." />
+        <LoadingSpinner message="Loading categories..." />
       ) : isError ? (
         <ErrorState
-          message="Gagal memuat kategori. Periksa koneksi Anda."
+          message="Failed to load categories. Check your connection."
           onRetry={() => {
             void categoriesQuery.refetch();
             void agentsQuery.refetch();
@@ -104,8 +123,8 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
         />
       ) : categories.length === 0 ? (
         <EmptyState
-          title="Belum ada kategori"
-          message="Kategori latihan belum tersedia di server."
+          title="No categories yet"
+          message="Practice categories are not available on the server yet."
           icon="chatbubbles-outline"
         />
       ) : (
@@ -113,8 +132,8 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
           data={categories}
           keyExtractor={(item) => item.categoryId}
           numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.grid}
+          columnWrapperClassName="gap-3 mb-3"
+          contentContainerClassName="px-3 pb-6"
           showsVerticalScrollIndicator={false}
           refreshControl={
             <ScreenRefreshControl
@@ -124,7 +143,7 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
             />
           }
           renderItem={({ item }) => (
-            <View style={styles.cardWrapper}>
+            <View className="flex-1">
               <CategoryCard
                 category={item}
                 onPress={handleCategoryPress}
@@ -135,41 +154,6 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: theme.colors.background.main,
-  },
-  header: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-  },
-  headerLabel: {
-    marginBottom: theme.spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dropdownPlaceholder: {
-    height: 36,
-  },
-  errorBox: {
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-  },
-  grid: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
-  row: {
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  cardWrapper: {
-    flex: 1,
-  },
-});

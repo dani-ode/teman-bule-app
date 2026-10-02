@@ -11,8 +11,46 @@ export const sessionResponseSchema = z.object({
   kind: z.string(),
   state: z.string(),
   started_at: z.string(),
+  agent_code: z.string().nullable().optional(),
+  category_id: z.string().nullable().optional(),
 });
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
+
+export const firstMessageResponseSchema = z.object({
+  message_id: z.string(),
+  session_id: z.string(),
+  role: z.string(),
+  text: z.string(),
+  modality: z.string(),
+  audio_url: z.string().nullable(),
+  audio_duration_ms: z.number().int().nullable(),
+  sequence: z.number().int(),
+  terminal_state: z.string(),
+  created_at: z.string(),
+});
+export type FirstMessageResponse = z.infer<typeof firstMessageResponseSchema>;
+
+export const createSessionResponseSchema = z.object({
+  session_id: z.string(),
+  kind: z.string(),
+  state: z.string(),
+  started_at: z.string(),
+  agent_code: z.string(),
+  category_id: z.string(),
+  first_message: firstMessageResponseSchema.nullable(),
+});
+export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
+
+export const sessionListItemResponseSchema = z.object({
+  session_id: z.string(),
+  kind: z.string(),
+  state: z.string(),
+  category_id: z.string(),
+  agent_code: z.string(),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+});
+export type SessionListItemResponse = z.infer<typeof sessionListItemResponseSchema>;
 
 export const practiceCategoryResponseSchema = z.object({
   category_id: z.string(),

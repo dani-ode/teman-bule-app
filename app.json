@@ -31,7 +31,22 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "@livekit/react-native-expo-plugin",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow TemanBule to use your camera for video calls with your AI tutor.",
+          "microphonePermission": "Allow TemanBule to use your microphone for voice and video calls.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow TemanBule to record voice messages and join voice calls."
+        }
+      ]
     ],
     "extra": {
       "eas": {

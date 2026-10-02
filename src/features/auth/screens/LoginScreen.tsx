@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '@/core/navigation/types';
@@ -36,45 +36,45 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={{ flex: 1, backgroundColor: theme.colors.background.main }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerClassName="flex-grow justify-center p-6" keyboardShouldPersistTaps="handled">
         {/* Logo/Brand Section */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoCircle}>
+        <View className="items-center mb-8">
+          <View className="w-20 h-20 rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
             <Ionicons name="language" size={40} color={theme.colors.text.inverse} />
           </View>
-          <Text variant="heading" weight="bold" style={styles.title}>
+          <Text variant="heading" weight="bold" className="mb-1 text-primary-700">
             TemanBule
           </Text>
-          <Text variant="body" color="secondary" style={styles.subtitle}>
-            Belajar bahasa Inggris bersama Elean dan Willy
+          <Text variant="body" color="secondary" align="center">
+            Learn English with Elean and Willy
           </Text>
         </View>
 
         {error ? (
-          <View style={styles.errorBox}>
+          <View className="mb-3">
             <ErrorState message={error.message} requestId={error.requestId} />
           </View>
         ) : null}
 
-        <View style={styles.formSection}>
+        <View className="mb-4">
           <FormField
             label="Email"
             value={email}
             onChangeText={setEmail}
-            placeholder="nama@email.com"
+            placeholder="name@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!submitting}
             icon="mail-outline"
           />
           <FormField
-            label="Kata sandi"
+            label="Password"
             value={password}
             onChangeText={setPassword}
-            placeholder="Kata sandi Anda"
+            placeholder="Your password"
             secureTextEntry
             autoCapitalize="none"
             editable={!submitting}
@@ -82,11 +82,11 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           />
 
           <Button
-            label="Masuk"
+            label="Sign In"
             onPress={handleLogin}
             disabled={!canSubmit}
             loading={submitting}
-            accessibilityLabel="Masuk ke akun"
+            accessibilityLabel="Sign in to your account"
             icon="log-in-outline"
             size="lg"
           />
@@ -94,39 +94,39 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           <Pressable
             onPress={() => navigation.navigate('ForgotPassword')}
             accessibilityRole="button"
-            style={styles.linkContainer}
+            className="mt-3 items-center py-2"
           >
             <Text variant="body" color="primary" weight="medium">
-              Lupa kata sandi?
+              Forgot password?
             </Text>
           </Pressable>
         </View>
 
         {/* Divider */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text variant="caption" color="muted" style={styles.dividerText}>
-            atau
+        <View className="flex-row items-center my-4">
+          <View className="flex-1 h-px bg-khaki-300" />
+          <Text variant="caption" color="muted" className="mx-3">
+            or
           </Text>
-          <View style={styles.dividerLine} />
+          <View className="flex-1 h-px bg-khaki-300" />
         </View>
 
         {/* Google OAuth */}
         <Button
-          label="Masuk dengan Google"
+          label="Sign in with Google"
           onPress={() => navigation.navigate('OAuthReturn')}
           variant="outline"
           icon="logo-google"
-          accessibilityLabel="Masuk dengan Google"
+          accessibilityLabel="Sign in with Google"
         />
 
-        <View style={styles.footer}>
+        <View className="flex-row justify-center mt-6">
           <Text variant="body" color="secondary">
-            Belum punya akun?{' '}
+            Don't have an account?{' '}
           </Text>
           <Pressable onPress={() => navigation.navigate('Register')} accessibilityRole="button">
             <Text variant="body" color="primary" weight="bold">
-              Daftar
+              Sign Up
             </Text>
           </Pressable>
         </View>
@@ -134,60 +134,3 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.background.main },
-  container: {
-    padding: theme.spacing.xl,
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  brandSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  title: {
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.primary[700],
-  },
-  subtitle: {
-    textAlign: 'center',
-  },
-  formSection: {
-    marginBottom: theme.spacing.lg,
-  },
-  errorBox: { marginBottom: theme.spacing.md },
-  linkContainer: {
-    marginTop: theme.spacing.md,
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.khaki[300],
-  },
-  dividerText: {
-    marginHorizontal: theme.spacing.md,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: theme.spacing.xl,
-  },
-});

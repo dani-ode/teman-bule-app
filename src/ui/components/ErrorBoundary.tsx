@@ -26,7 +26,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: unknown): State {
-    const message = error instanceof Error ? error.message : 'Kesalahan tidak dikenal.';
+    const message = error instanceof Error ? error.message : 'Unknown error.';
     return { hasError: true, message };
   }
 
@@ -51,17 +51,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <Ionicons name="bug-outline" size={56} color={theme.colors.semantic.error} />
           </View>
           <Text variant="title" weight="bold" style={styles.title}>
-            Terjadi kesalahan
+            Something went wrong
           </Text>
           <Text variant="body" color="secondary" style={styles.body}>
-            Aplikasi menemui kendala tak terduga. Anda dapat mencoba melanjutkan.
+            The app ran into an unexpected problem. You can try to continue.
           </Text>
           {this.state.message ? (
             <Text variant="caption" color="muted" style={styles.detail} numberOfLines={3}>
               {this.state.message}
             </Text>
           ) : null}
-          <Button label="Coba lagi" onPress={this.handleReset} style={styles.button} icon="refresh" />
+          <Button label="Try Again" onPress={this.handleReset} style={styles.button} icon="refresh" />
         </View>
       );
     }

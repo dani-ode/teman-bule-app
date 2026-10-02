@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { PodcastStackParamList } from '@/core/navigation/types';
@@ -25,21 +26,21 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
   const [items] = useState<Podcast[]>([]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <View>
           <Text variant="title" weight="bold">
             Podcast
           </Text>
           <Text variant="caption" color="secondary">
-            Dengarkan dan pelajari dari podcast AI
+            Listen and learn from AI podcasts
           </Text>
         </View>
         <Button
-          label="Buat baru"
+          label="Create new"
           onPress={() => navigation.navigate('PodcastCreate')}
           variant="secondary"
-          accessibilityLabel="Buat podcast baru"
+          accessibilityLabel="Create new podcast"
           icon="add-outline"
           size="sm"
         />
@@ -48,8 +49,8 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
       {items.length === 0 ? (
         <View style={styles.center}>
           <EmptyState
-            title="Belum ada podcast"
-            message="Buat podcast dari dokumen PDF Anda. Daftar pustaka akan tersedia setelah endpoint daftar podcast dibuka oleh server."
+            title="No podcasts yet"
+            message="Create a podcast from your PDF documents. The library list will be available once the server exposes the podcast list endpoint."
             icon="headset-outline"
           />
         </View>
@@ -94,7 +95,7 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -125,10 +126,10 @@ export const PodcastCreateScreen: React.FC<CreateProps> = ({ navigation }) => {
           <Ionicons name="add-circle-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.createTitle}>
-          Podcast baru
+          New Podcast
         </Text>
         <Text variant="body" color="secondary" style={styles.createSubtitle}>
-          Beri judul, lalu unggah PDF sumber pada langkah berikutnya.
+          Give it a title, then upload the source PDF in the next step.
         </Text>
       </View>
 
@@ -139,19 +140,19 @@ export const PodcastCreateScreen: React.FC<CreateProps> = ({ navigation }) => {
       ) : null}
 
       <FormField
-        label="Judul"
+        label="Title"
         value={title}
         onChangeText={setTitle}
-        placeholder="Judul podcast"
+        placeholder="Podcast title"
         editable={!submitting}
         icon="create-outline"
       />
       <Button
-        label="Buat"
+        label="Create"
         onPress={handleCreate}
         disabled={title.trim().length === 0 || submitting}
         loading={submitting}
-        accessibilityLabel="Buat podcast"
+        accessibilityLabel="Create podcast"
         icon="add-outline"
         size="lg"
       />

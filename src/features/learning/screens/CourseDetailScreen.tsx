@@ -19,14 +19,14 @@ export const CourseDetailScreen: React.FC<Props> = ({ route }) => {
   return (
     <View style={styles.container}>
       <EmptyState
-        title="Daftar pelajaran belum tersedia"
-        message={`Struktur unit/pelajaran untuk kursus ${courseId} menunggu kontrak daftar konten dari server (FE-03).`}
+        title="Lesson list not available yet"
+        message={`The unit/lesson structure for course ${courseId} is waiting for a content listing contract from the server (FE-03).`}
         icon="library-outline"
       />
       <View style={styles.noteContainer}>
         <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.muted} />
         <Text variant="caption" color="muted" style={styles.note}>
-          Materi dapat dibuka langsung melalui ID pelajaran yang dipublikasikan.
+          Materials can be opened directly using the published lesson ID.
         </Text>
       </View>
     </View>

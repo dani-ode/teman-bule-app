@@ -1,33 +1,57 @@
-import React from 'react';
-import { View, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChatStackParamList } from '@/core/navigation/types';
 import {
   usePracticeMessages,
   usePracticeSession,
   useSendPracticeMessage,
+  useAgentPersonas,
+  usePracticeCategories,
   PendingMessage,
 } from '../hooks/usePractice';
 import { mergeMessages, MergedMessage } from '../hooks/messageReducer';
 import { userMessageForError } from '@/core/errors/errorMessage';
+import { getServices } from '@/core/di/ServiceContainer';
 import { Text } from '@/ui/components/Text';
 import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 import { MessageBubble } from '../components/MessageBubble';
-import { MessageComposer } from '../components/MessageComposer';
+import { GreetingAudioBubble } from '../components/GreetingAudioBubble';
+import { VoiceComposer } from '../components/VoiceComposer';
+import { ChatHeader } from '../components/ChatHeader';
+import { HistoryBottomSheet } from '../components/HistoryBottomSheet';
+import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'Conversation'>;
 
-export const ConversationScreen: React.FC<Props> = ({ route }) => {
-  const { sessionId, agentCode } = route.params;
+export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { sessionId, agentCode, categoryId } = route.params;
+  const queryClient = useQueryClient();
+
   const session = usePracticeSession(sessionId);
   const messages = usePracticeMessages(sessionId);
+  const agentsQuery = useAgentPersonas();
+  const categoriesQuery = usePracticeCategories();
   const { pendingMessages, send, retry } = useSendPracticeMessage(sessionId);
-  const [sendError, setSendError] = React.useState<string | null>(null);
 
-  const handleSend = async (text: string) => {
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
+
+  // Get current agent and category info
+  const currentAgent = useMemo(() => {
+    return agentsQuery.data?.find((a) => a.code === agentCode) ?? null;
+  }, [agentsQuery.data, agentCode]);
+
+  const currentCategory = useMemo(() => {
+    return categoriesQuery.data?.find((c) => c.categoryId === categoryId) ?? null;
+  }, [categoriesQuery.data, categoryId]);
+
+  const handleSendText = async (text: string) => {
     setSendError(null);
     try {
       await send(text);
@@ -36,40 +60,166 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
     }
   };
 
-  const merged: MergedMessage[] = mergeMessages(messages.data ?? [], pendingMessages);
+  const handleSendVoice = async (uri: string, _durationMs: number) => {
+    setSendError(null);
+    try {
+      // 1. Register upload
+      const fileInfo = await fetch(uri);
+      const blob = await fileInfo.blob();
+      const sizeBytes = blob.size;
 
-  const isClosed = session.data?.state !== undefined && session.data.state !== 'active';
+      const uploadResult = await getServices().mediaService.registerUpload({
+        mediaType: 'audio',
+        sizeBytes,
+      });
+
+      if (!uploadResult.uploadUrl) {
+        throw new Error('Upload URL not available');
+      }
+
+      // 2. Upload to S3
+      await getServices().mediaService.uploadToS3(uploadResult.uploadUrl, uri);
+
+      // 3. Finalize upload
+      const finalizeResult = await getServices().mediaService.finalizeUpload({
+        mediaId: uploadResult.mediaId,
+        checksum: 'sha256-placeholder', // TODO: Calculate actual checksum
+        actualBytes: sizeBytes,
+      });
+
+      // 4. Send voice message to chat
+      // Note: Backend endpoint for voice message is /voice-messages
+      // This will be handled by Langflow for STT + TTS
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_BASE_URL}/practice/sessions/${sessionId}/voice-messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Auth header will be added by interceptor
+          },
+          body: JSON.stringify({
+            media_id: finalizeResult.mediaId,
+            text: null, // Let Langflow do STT
+            client_message_id: `voice-${Date.now()}`,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to send voice message');
+      }
+
+      // Refresh messages
+      await messages.refetch();
+    } catch (err) {
+      console.error('Failed to send voice:', err);
+      setSendError(
+        err instanceof Error ? err.message : 'Failed to send voice message'
+      );
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    setIsDeleting(true);
+    try {
+      await getServices().practiceService.deleteSession(sessionId);
+      // Invalidate queries and navigate back
+      queryClient.invalidateQueries({ queryKey: ['practice'] });
+      navigation.goBack();
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+      setSendError('Failed to delete chat');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  /**
+   * New Chat: buat session baru (agent+kategori sama). Backend memanggil
+   * workflow Langflow untuk chat pertama AI; greeting di-seed ke cache agar
+   * langsung tampil saat room berpindah ke session baru.
+   */
+  const handleNewChat = async () => {
+    if (isCreatingNewChat) return;
+    setIsCreatingNewChat(true);
+    setSendError(null);
+    try {
+      const created = await getServices().practiceService.createSession({
+        agentCode,
+        categoryId,
+      });
+      if (created.firstMessage) {
+        queryClient.setQueryData<ConversationMessage[]>(
+          ['practice', 'messages', created.sessionId],
+          [created.firstMessage]
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['practice', 'sessions'] });
+      navigation.setParams({
+        sessionId: created.sessionId,
+        agentCode,
+        categoryId,
+      });
+    } catch (err) {
+      console.error('Failed to create new chat:', err);
+      setSendError(userMessageForError(err).message);
+    } finally {
+      setIsCreatingNewChat(false);
+    }
+  };
+
+  const handleSelectHistorySession = useCallback(
+    (newSessionId: string, newAgentCode: AgentCode, newCategoryId: string) => {
+      // Navigate to the selected session
+      navigation.setParams({
+        sessionId: newSessionId,
+        agentCode: newAgentCode,
+        categoryId: newCategoryId,
+      });
+    },
+    [navigation]
+  );
+
+  const merged: MergedMessage[] = mergeMessages(
+    messages.data ?? [],
+    pendingMessages
+  );
+
+  const isClosed =
+    session.data?.state !== undefined && session.data.state !== 'active';
+
+  // Remount list saat session berganti agar autoplay greeting direset.
+  useEffect(() => {
+    setSendError(null);
+  }, [sessionId]);
+
+  const isGreetingAudio = (item: MergedMessage): boolean =>
+    !('pending' in item) &&
+    item.role === 'agent' &&
+    item.modality === 'audio' &&
+    typeof item.audioUrl === 'string' &&
+    item.audioUrl.length > 0;
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={{ flex: 1, backgroundColor: theme.colors.background.main }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
+      keyboardVerticalOffset={0}
     >
-      <View style={styles.header}>
-        <View style={styles.headerAvatar}>
-          <Ionicons
-            name={agentCode === 'elean' ? 'woman' : 'man'}
-            size={20}
-            color={theme.colors.text.inverse}
-          />
-        </View>
-        <View style={styles.headerInfo}>
-          <Text variant="subtitle" weight="bold" style={styles.headerTitle}>
-            {agentCode === 'elean' ? 'Elean' : 'Willy'}
-          </Text>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, isClosed ? styles.statusDotClosed : styles.statusDotActive]} />
-            <Text variant="caption" color="secondary">
-              {isClosed ? 'Sesi selesai' : 'Sesi aktif'}
-            </Text>
-          </View>
-        </View>
-      </View>
+      {/* Header with model info and menu */}
+      <ChatHeader
+        agent={currentAgent}
+        category={currentCategory}
+        onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
+        onShowHistory={() => setHistoryVisible(true)}
+      />
 
+      {/* Messages list */}
       {messages.isLoading ? (
-        <View style={styles.center}>
-          <LoadingSpinner message="Memuat riwayat..." />
+        <View className="flex-1 justify-center">
+          <LoadingSpinner message="Loading history..." />
         </View>
       ) : messages.isError ? (
         <ErrorState
@@ -79,94 +229,63 @@ export const ConversationScreen: React.FC<Props> = ({ route }) => {
         />
       ) : (
         <FlatList
+          key={sessionId}
           data={merged}
           keyExtractor={(item) => item.messageId}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <MessageBubble
-              message={item}
-              onRetry={
-                'pending' in item && item.failed
-                  ? () => retry((item as PendingMessage).messageId)
-                  : undefined
-              }
-            />
-          )}
+          contentContainerClassName="p-3 flex-grow"
+          renderItem={({ item }) =>
+            isGreetingAudio(item) ? (
+              <GreetingAudioBubble
+                audioUrl={item.audioUrl as string}
+                text={item.text ?? ''}
+                audioDurationMs={item.audioDurationMs}
+                autoPlay
+              />
+            ) : (
+              <MessageBubble
+                message={item}
+                onRetry={
+                  'pending' in item && item.failed
+                    ? () => retry((item as PendingMessage).messageId)
+                    : undefined
+                }
+              />
+            )
+          }
           ListEmptyComponent={
             <EmptyState
-              title="Mulai percakapan"
-              message="Kirim pesan pertama Anda untuk memulai latihan."
+              title="Start a conversation"
+              message="Hold the microphone button to record a voice message, or tap the chat icon to type."
               icon="chatbubble-ellipses-outline"
             />
           }
         />
       )}
 
+      {/* Error banner */}
       {sendError ? (
-        <View style={styles.sendErrorBox}>
-          <Ionicons name="alert-circle" size={16} color={theme.colors.semantic.error} />
-          <Text variant="caption" style={styles.sendErrorText}>
+        <View className="flex-row items-center gap-2 bg-[#f5e0dc] p-2 mx-3 rounded-md mb-1">
+          <Text variant="caption" className="text-danger flex-1">
             {sendError}
           </Text>
         </View>
       ) : null}
 
-      <MessageComposer onSend={handleSend} disabled={isClosed} />
+      {/* Voice-first composer */}
+      <VoiceComposer
+        onSendText={handleSendText}
+        onSendVoice={handleSendVoice}
+        disabled={isClosed || isDeleting || isCreatingNewChat}
+      />
+
+      {/* History bottom sheet */}
+      <HistoryBottomSheet
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onSelectSession={handleSelectHistorySession}
+        currentAgentCode={agentCode}
+        currentCategoryId={categoryId}
+      />
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: theme.colors.background.main },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background.card,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.khaki[200],
-  },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: { textTransform: 'capitalize' },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    marginTop: 2,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusDotActive: {
-    backgroundColor: theme.colors.semantic.success,
-  },
-  statusDotClosed: {
-    backgroundColor: theme.colors.text.muted,
-  },
-  center: { flex: 1, justifyContent: 'center' },
-  list: { padding: theme.spacing.md, flexGrow: 1 },
-  sendErrorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: '#f5e0dc',
-    padding: theme.spacing.sm,
-    marginHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.xs,
-  },
-  sendErrorText: { color: theme.colors.semantic.error, flex: 1 },
-});

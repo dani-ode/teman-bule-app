@@ -26,8 +26,8 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
       return;
     }
     Alert.alert(title, message, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Ya', style: 'destructive', onPress: onConfirm },
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Yes', style: 'destructive', onPress: onConfirm },
     ]);
   };
 
@@ -44,8 +44,8 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
 
   const handleDelete = () => {
     confirm(
-      'Hapus akun?',
-      'Akses Anda segera dicabut dan penghapusan data berjalan sebagai proses asynchronous. Data keuangan yang wajib disimpan tetap diminimalkan sesuai kebijakan retensi.',
+      'Delete account?',
+      'Your access is revoked immediately and data deletion runs as an asynchronous process. Financial data that must be retained remains minimized according to the retention policy.',
       async () => {
         setBusy(true);
         setError(null);
@@ -68,7 +68,7 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
           <Ionicons name="shield-checkmark-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.title}>
-          Keamanan akun
+          Account Security
         </Text>
       </View>
 
@@ -83,12 +83,12 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
           <View style={styles.deletionHeader}>
             <Ionicons name="warning-outline" size={24} color={theme.colors.accent[700]} />
             <Text variant="subtitle" weight="bold" style={styles.deletionTitle}>
-              Penghapusan dimulai
+              Deletion started
             </Text>
           </View>
           <Text variant="body" color="secondary" style={styles.deletionBody}>
-            Permintaan diterima (status: {deletion.status}). Penghapusan di seluruh penyimpanan
-            berjalan bertahap; ini bukan konfirmasi bahwa semua data sudah terhapus.
+            Request received (status: {deletion.status}). Deletion across all storage
+            runs gradually; this is not a confirmation that all data has been erased.
           </Text>
           <Text variant="caption" color="muted">
             ID: {deletion.id}
@@ -100,22 +100,22 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
         <View style={styles.cardHeader}>
           <Ionicons name="log-out-outline" size={24} color={theme.colors.primary[600]} />
           <Text variant="subtitle" weight="semibold" style={styles.cardTitle}>
-            Sesi
+            Sessions
           </Text>
         </View>
         <Text variant="caption" color="secondary" style={styles.cardBody}>
-          Keluar dari semua perangkat akan mencabut seluruh sesi aktif Anda.
+          Signing out of all devices will revoke all of your active sessions.
         </Text>
         <Button
-          label="Keluar dari semua perangkat"
+          label="Sign out of all devices"
           onPress={() =>
-            confirm('Keluar dari semua perangkat?', 'Anda harus masuk kembali di semua perangkat.', () =>
+            confirm('Sign out of all devices?', 'You will need to sign in again on all devices.', () =>
               void handleLogoutAll(),
             )
           }
           variant="outline"
           disabled={busy}
-          accessibilityLabel="Keluar dari semua perangkat"
+          accessibilityLabel="Sign out of all devices"
           icon="log-out-outline"
         />
       </Card>
@@ -124,18 +124,18 @@ export const AccountSecurityScreen: React.FC<Props> = () => {
         <View style={styles.cardHeader}>
           <Ionicons name="trash-outline" size={24} color={theme.colors.semantic.error} />
           <Text variant="subtitle" weight="semibold" style={styles.dangerTitle}>
-            Hapus akun
+            Delete account
           </Text>
         </View>
         <Text variant="caption" color="secondary" style={styles.cardBody}>
-          Tindakan ini mencabut akses dan memulai penghapusan data Anda.
+          This action revokes access and starts the deletion of your data.
         </Text>
         <Button
-          label="Hapus akun saya"
+          label="Delete my account"
           onPress={handleDelete}
           variant="outline"
           disabled={busy || deletion !== null}
-          accessibilityLabel="Hapus akun saya"
+          accessibilityLabel="Delete my account"
           icon="trash-outline"
         />
       </Card>

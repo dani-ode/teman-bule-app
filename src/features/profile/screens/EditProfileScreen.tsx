@@ -26,7 +26,7 @@ export const EditProfileScreen: React.FC<Props> = () => {
   if (profile.isLoading) {
     return (
       <View style={styles.center}>
-        <LoadingSpinner message="Memuat profil..." />
+        <LoadingSpinner message="Loading profile..." />
       </View>
     );
   }
@@ -52,12 +52,12 @@ export const EditProfileScreen: React.FC<Props> = () => {
           <Ionicons name="person-outline" size={36} color={theme.colors.text.inverse} />
         </View>
         <Text variant="title" weight="bold" style={styles.title}>
-          Edit profil
+          Edit Profile
         </Text>
       </View>
       <Card variant="default" style={styles.card}>
         <FormField
-          label="Nama tampilan"
+          label="Display Name"
           value={profile.data?.displayName ?? ''}
           onChangeText={() => {}}
           editable={false}
@@ -73,7 +73,7 @@ export const EditProfileScreen: React.FC<Props> = () => {
         <View style={styles.noteRow}>
           <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.muted} />
           <Text variant="caption" color="secondary" style={styles.note}>
-            Pembaruan profil akan tersedia setelah endpoint PATCH profil dibuka oleh server (FE-03).
+            Profile updates will be available once the server exposes the profile PATCH endpoint (FE-03).
           </Text>
         </View>
       </Card>

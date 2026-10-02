@@ -1,6 +1,10 @@
 import 'react-native-gesture-handler';
+import './global.css';
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { installLiveKitGlobals } from '@/features/call/livekit/installLiveKit';
+
+installLiveKitGlobals();
+import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,7 +16,6 @@ import { linking } from '@/core/navigation/linking';
 import { ErrorBoundary } from '@/ui/components/ErrorBoundary';
 import { ErrorState } from '@/ui/components/States';
 import { userMessageForError } from '@/core/errors/errorMessage';
-import { theme } from '@/ui/theme';
 
 /**
  * Composition root (App.tsx): providers + bootstrap.
@@ -43,14 +46,14 @@ export default function App() {
 
   if (bootError) {
     return (
-      <View style={styles.boot}>
-        <ErrorState title="Gagal memulai aplikasi" message={bootError.message} requestId={bootError.requestId} />
+      <View className="flex-1 justify-center items-center bg-background-main p-6">
+        <ErrorState title="Failed to start the app" message={bootError.message} requestId={bootError.requestId} />
       </View>
     );
   }
 
   if (!services) {
-    return <View style={styles.boot} />;
+    return <View className="flex-1 justify-center items-center bg-background-main p-6" />;
   }
 
   return (
@@ -68,13 +71,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.main,
-    padding: theme.spacing.xl,
-  },
-});

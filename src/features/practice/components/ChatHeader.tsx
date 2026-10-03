@@ -12,6 +12,7 @@ export interface ChatHeaderProps {
   readonly onNewChat: () => void;
   readonly onDeleteChat: () => void;
   readonly onShowHistory: () => void;
+  readonly onBack?: () => void;
 }
 
 /**
@@ -23,6 +24,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onNewChat,
   onDeleteChat,
   onShowHistory,
+  onBack,
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const insets = useSafeAreaInsets();
@@ -58,6 +60,23 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         className="flex-row items-center p-3 bg-background-card border-b border-khaki-200"
         style={{ paddingTop: insets.top + 12 }}
       >
+        {/* Back button */}
+        {onBack && (
+          <Pressable
+            onPress={onBack}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="p-2 -ml-2 mr-1 active:opacity-70"
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={theme.colors.text.primary}
+            />
+          </Pressable>
+        )}
+
         {/* Avatar */}
         {agent?.profileImageUrl ? (
           <Image

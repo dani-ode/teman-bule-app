@@ -214,6 +214,7 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
         onNewChat={handleNewChat}
         onDeleteChat={handleDeleteChat}
         onShowHistory={() => setHistoryVisible(true)}
+        onBack={() => navigation.goBack()}
       />
 
       {/* Messages list */}
@@ -222,11 +223,13 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
           <LoadingSpinner message="Loading history..." />
         </View>
       ) : messages.isError ? (
-        <ErrorState
-          message={userMessageForError(messages.error).message}
-          requestId={userMessageForError(messages.error).requestId}
-          onRetry={() => messages.refetch()}
-        />
+        <View className="flex-1">
+          <ErrorState
+            message={userMessageForError(messages.error).message}
+            requestId={userMessageForError(messages.error).requestId}
+            onRetry={() => messages.refetch()}
+          />
+        </View>
       ) : (
         <FlatList
           key={sessionId}
@@ -271,12 +274,14 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
       ) : null}
 
-      {/* Voice-first composer */}
-      <VoiceComposer
-        onSendText={handleSendText}
-        onSendVoice={handleSendVoice}
-        disabled={isClosed || isDeleting || isCreatingNewChat}
-      />
+      {/* Voice-first composer - always at bottom */}
+      <View className="mt-auto">
+        <VoiceComposer
+          onSendText={handleSendText}
+          onSendVoice={handleSendVoice}
+          disabled={isClosed || isDeleting || isCreatingNewChat}
+        />
+      </View>
 
       {/* History bottom sheet */}
       <HistoryBottomSheet

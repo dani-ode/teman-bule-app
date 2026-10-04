@@ -23,6 +23,30 @@ export interface CallSession {
   readonly endReason: string | null;
 }
 
+export interface CallSessionListItem {
+  readonly sessionId: string;
+  readonly mode: string;
+  readonly state: string;
+  readonly agentCode: string;
+  readonly agentDisplayName: string;
+  readonly agentProfileImageUrl: string | null;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly durationSeconds: number | null;
+}
+
+/** Assessment categories for call evaluation. */
+export interface CallAssessment {
+  readonly sessionId: string;
+  readonly pronunciation: number | null;
+  readonly grammar: number | null;
+  readonly fluency: number | null;
+  readonly vocabulary: number | null;
+  readonly comprehension: number | null;
+  readonly overallScore: number | null;
+  readonly feedback: string | null;
+}
+
 export interface Podcast {
   readonly podcastId: string;
   readonly title: string;

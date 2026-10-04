@@ -1,14 +1,17 @@
+import { z } from 'zod';
 import { ICallService, IPodcastService } from '@/domain/realtime/IRealtimeServices';
 import {
   CallEndReason,
   CallMode,
   CallSession,
+  CallSessionListItem,
   Podcast,
   PodcastSource,
 } from '@/domain/realtime/realtime.types';
 import { AgentCode } from '@/domain/practice/practice.types';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
 import {
+  callListItemResponseSchema,
   callResponseSchema,
   joinTokenResponseSchema,
   podcastResponseSchema,
@@ -84,6 +87,31 @@ export class ApiCallService implements ICallService {
       }),
     );
     return this.mapCall(data);
+  }
+
+  public async listCalls(input?: { state?: string; limit?: number }): Promise<CallSessionListItem[]> {
+    const params = new URLSearchParams();
+    if (input?.state) params.set('state', input.state);
+    if (input?.limit) params.set('limit', String(input.limit));
+    const qs = params.toString();
+    const data = decode(
+      z.array(callListItemResponseSchema),
+      await this.http.request({
+        method: 'GET',
+        path: `/calls${qs ? `?${qs}` : ''}`,
+      }),
+    );
+    return data.map((c) => ({
+      sessionId: c.session_id,
+      mode: c.mode,
+      state: c.state,
+      agentCode: c.agent_code,
+      agentDisplayName: c.agent_display_name,
+      agentProfileImageUrl: c.agent_profile_image_url,
+      startedAt: c.started_at,
+      endedAt: c.ended_at,
+      durationSeconds: c.duration_seconds,
+    }));
   }
 }
 

@@ -162,6 +162,19 @@ export const callResponseSchema = z.object({
 });
 export type CallResponse = z.infer<typeof callResponseSchema>;
 
+export const callListItemResponseSchema = z.object({
+  session_id: z.string(),
+  mode: z.string(),
+  state: z.string(),
+  agent_code: z.string(),
+  agent_display_name: z.string(),
+  agent_profile_image_url: z.string().nullable(),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+  duration_seconds: z.number().int().nullable(),
+});
+export type CallListItemResponse = z.infer<typeof callListItemResponseSchema>;
+
 export const joinTokenResponseSchema = z.object({
   join_token: z.string(),
 });

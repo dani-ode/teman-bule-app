@@ -1,4 +1,4 @@
-import { CallEndReason, CallMode, CallSession, Podcast, PodcastSource } from './realtime.types';
+import { CallEndReason, CallMode, CallSession, CallSessionListItem, Podcast, PodcastSource } from './realtime.types';
 import { AgentCode } from '../practice/practice.types';
 
 export interface ICallService {
@@ -11,6 +11,7 @@ export interface ICallService {
   /** Throws FeatureUnavailable until backend realtime admission is enabled. */
   getJoinToken(sessionId: string): Promise<string>;
   endCall(sessionId: string, endReason: CallEndReason): Promise<CallSession>;
+  listCalls(input?: { state?: string; limit?: number }): Promise<CallSessionListItem[]>;
 }
 
 export interface IPodcastService {

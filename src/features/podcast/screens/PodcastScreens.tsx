@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, FlatList } from 'react-native';
+import { View, Pressable, FlatList, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { PodcastStackParamList } from '@/core/navigation/types';
 import { getServices } from '@/core/di/ServiceContainer';
 import { userMessageForError } from '@/core/errors/errorMessage';
@@ -12,22 +13,19 @@ import { Button } from '@/ui/components/Button';
 import { FormField } from '@/ui/components/FormField';
 import { ErrorState, EmptyState } from '@/ui/components/States';
 import { ScreenRefreshControl } from '@/ui/components/ScreenRefreshControl';
-import { Podcast } from '@/domain/realtime/realtime.types';
+import { usePodcastList } from '../hooks/usePodcasts';
 import { theme } from '@/ui/theme';
 
 type LibraryProps = NativeStackScreenProps<PodcastStackParamList, 'PodcastLibrary'>;
 
-/**
- * Podcast library. Backend has no list-podcasts endpoint yet (FE-03); the
- * library therefore tracks podcasts created in this session locally and
- * surfaces the missing-list contract explicitly.
- */
+/** Podcast library: daftar backend-authoritative via GET /podcasts. */
 export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => {
-  const [items] = useState<Podcast[]>([]);
+  const list = usePodcastList();
+  const items = list.data ?? [];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView className="flex-1 bg-background-main" edges={['top']}>
+      <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
         <View>
           <Text variant="title" weight="bold">
             Podcast
@@ -46,11 +44,18 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
         />
       </View>
 
-      {items.length === 0 ? (
-        <View style={styles.center}>
+      {list.isError ? (
+        <View className="flex-1 justify-center items-center">
+          <ErrorState
+            message={userMessageForError(list.error).message}
+            onRetry={() => void list.refetch()}
+          />
+        </View>
+      ) : items.length === 0 && !list.isRefetching ? (
+        <View className="flex-1 justify-center items-center">
           <EmptyState
             title="No podcasts yet"
-            message="Create a podcast from your PDF documents. The library list will be available once the server exposes the podcast list endpoint."
+            message="Create a podcast from your PDF documents."
             icon="headset-outline"
           />
         </View>
@@ -58,25 +63,22 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
         <FlatList
           data={items}
           keyExtractor={(p) => p.podcastId}
-          contentContainerStyle={styles.list}
+          contentContainerClassName="px-4 pb-4"
           refreshControl={
-            <ScreenRefreshControl
-              onRefresh={() => {
-                /* Library podcast masih lokal; refresh disiapkan untuk endpoint daftar nanti */
-              }}
-            />
+            <ScreenRefreshControl onRefresh={() => void list.refetch()} />
           }
           renderItem={({ item }) => (
             <Pressable
               onPress={() => navigation.navigate('PodcastDetail', { podcastId: item.podcastId })}
               accessibilityRole="button"
+              className="active:opacity-80"
             >
-              <Card variant="elevated" style={styles.card}>
-                <View style={styles.cardRow}>
-                  <View style={styles.cardIcon}>
+              <Card variant="elevated" className="mb-3">
+                <View className="flex-row items-center">
+                  <View className="w-11 h-11 rounded-md bg-primary-100 items-center justify-center mr-3">
                     <Ionicons name="headset-outline" size={24} color={theme.colors.primary[600]} />
                   </View>
-                  <View style={styles.cardBody}>
+                  <View className="flex-1 mr-2">
                     <Text variant="subtitle" weight="bold">
                       {item.title}
                     </Text>
@@ -101,40 +103,142 @@ export const PodcastLibraryScreen: React.FC<LibraryProps> = ({ navigation }) => 
 
 type CreateProps = NativeStackScreenProps<PodcastStackParamList, 'PodcastCreate'>;
 
+type PickedPdf = {
+  uri: string;
+  name: string;
+  sizeBytes: number;
+};
+
+type CreateStage = 'idle' | 'creating' | 'registering' | 'uploading' | 'finalizing' | 'attaching';
+
+/**
+ * Create podcast + upload PDF source dalam satu layar.
+ *
+ * Alur:
+ *  1. POST /podcasts → dapat podcast_id.
+ *  2. POST /media/uploads → dapat presigned PUT URL (kredensial MinIO hanya di
+ *     backend; frontend cukup PUT ke URL yang sudah signed).
+ *  3. PUT binary langsung ke MinIO via presigned URL.
+ *  4. POST /media/{id}:complete → finalize.
+ *  5. POST /podcasts/{id}/sources → attach sebagai source (ingestion background).
+ */
 export const PodcastCreateScreen: React.FC<CreateProps> = ({ navigation }) => {
   const [title, setTitle] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [pdf, setPdf] = useState<PickedPdf | null>(null);
+  const [stage, setStage] = useState<CreateStage>('idle');
   const [error, setError] = useState<{ message: string; requestId: string | null } | null>(null);
 
-  const handleCreate = async () => {
-    if (title.trim().length === 0 || submitting) return;
-    setSubmitting(true);
+  const submitting = stage !== 'idle';
+
+  const handlePickPdf = async () => {
+    if (submitting) return;
     setError(null);
     try {
-      const podcast = await getServices().podcastService.createPodcast(title.trim());
-      navigation.replace('PodcastDetail', { podcastId: podcast.podcastId });
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (picked.canceled || picked.assets.length === 0) return;
+      const asset = picked.assets[0];
+      const sizeBytes = asset.size ?? 0;
+      if (sizeBytes <= 0) {
+        setError({ message: 'Ukuran PDF tidak terbaca; pilih file lain.', requestId: null });
+        return;
+      }
+      setPdf({
+        uri: asset.uri,
+        name: asset.name ?? 'document.pdf',
+        sizeBytes,
+      });
     } catch (err) {
       setError(userMessageForError(err));
-      setSubmitting(false);
     }
   };
 
+  const handleCreate = async () => {
+    if (title.trim().length === 0 || !pdf || submitting) return;
+    setError(null);
+    const { podcastService, mediaService, queryClient } = getServices();
+    try {
+      setStage('creating');
+      const podcast = await podcastService.createPodcast(title.trim());
+
+      setStage('registering');
+      const upload = await mediaService.registerUpload({
+        mediaType: 'pdf',
+        sizeBytes: pdf.sizeBytes,
+      });
+
+      if (upload.uploadUrl) {
+        setStage('uploading');
+        await mediaService.uploadToS3(upload.uploadUrl, pdf.uri);
+      }
+
+      setStage('finalizing');
+      const finalize = await mediaService.finalizeUpload({
+        mediaId: upload.mediaId,
+        checksum: 'sha256-placeholder',
+        actualBytes: pdf.sizeBytes,
+      });
+      if (finalize.scanState !== 'clean') {
+        throw new Error('Media belum dinyatakan bersih oleh scanner.');
+      }
+
+      setStage('attaching');
+      await podcastService.addSource(podcast.podcastId, upload.mediaId);
+
+      await queryClient.invalidateQueries({ queryKey: ['podcasts', 'list'] });
+      navigation.replace('PodcastDetail', { podcastId: podcast.podcastId });
+    } catch (err) {
+      setError(userMessageForError(err));
+      setStage('idle');
+    }
+  };
+
+  const submitLabel = (s: CreateStage): string => {
+    switch (s) {
+      case 'creating':
+        return 'Creating podcast…';
+      case 'registering':
+        return 'Registering upload…';
+      case 'uploading':
+        return 'Uploading PDF…';
+      case 'finalizing':
+        return 'Finalizing…';
+      case 'attaching':
+        return 'Attaching source…';
+      default:
+        return 'Create podcast';
+    }
+  };
+
+  const formatSize = (bytes: number): string => {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${bytes} B`;
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.createContainer} keyboardShouldPersistTaps="handled">
-      <View style={styles.createHeader}>
-        <View style={styles.createIconCircle}>
-          <Ionicons name="add-circle-outline" size={36} color={theme.colors.text.inverse} />
+    <ScrollView
+      contentContainerClassName="flex-grow p-4 bg-background-main"
+      keyboardShouldPersistTaps="handled"
+    >
+      <View className="items-center mb-6">
+        <View className="w-[72px] h-[72px] rounded-full bg-primary-600 items-center justify-center mb-4 shadow-card">
+          <Ionicons name="headset-outline" size={36} color={theme.colors.text.inverse} />
         </View>
-        <Text variant="title" weight="bold" style={styles.createTitle}>
+        <Text variant="title" weight="bold" className="mb-1 text-primary-700">
           New Podcast
         </Text>
-        <Text variant="body" color="secondary" style={styles.createSubtitle}>
-          Give it a title, then upload the source PDF in the next step.
+        <Text variant="body" color="secondary" className="text-center">
+          Give it a title and pick a source PDF. The document will be processed
+          in the background after creation.
         </Text>
       </View>
 
       {error ? (
-        <View style={styles.errorBox}>
+        <View className="mb-4">
           <ErrorState message={error.message} requestId={error.requestId} />
         </View>
       ) : null}
@@ -147,10 +251,74 @@ export const PodcastCreateScreen: React.FC<CreateProps> = ({ navigation }) => {
         editable={!submitting}
         icon="create-outline"
       />
+
+      <View className="mt-4 mb-4">
+        <Text variant="caption" color="secondary" className="mb-2">
+          Source PDF
+        </Text>
+        <Pressable
+          onPress={handlePickPdf}
+          disabled={submitting}
+          accessibilityRole="button"
+          accessibilityLabel="Pick source PDF"
+          className={[
+            'border-2 border-dashed rounded-lg p-4 items-center justify-center',
+            pdf ? 'border-primary-400 bg-primary-100/40' : 'border-khaki-300 bg-background-card',
+            submitting ? 'opacity-60' : 'active:opacity-80',
+          ].join(' ')}
+        >
+          {pdf ? (
+            <View className="flex-row items-center">
+              <Ionicons
+                name="document-text-outline"
+                size={28}
+                color={theme.colors.primary[600]}
+              />
+              <View className="ml-3 flex-1">
+                <Text variant="body" weight="bold" numberOfLines={1}>
+                  {pdf.name}
+                </Text>
+                <Text variant="caption" color="secondary">
+                  {formatSize(pdf.sizeBytes)} · Tap to change
+                </Text>
+              </View>
+              <Ionicons
+                name="checkmark-circle"
+                size={22}
+                color={theme.colors.primary[600]}
+              />
+            </View>
+          ) : (
+            <View className="items-center">
+              <Ionicons
+                name="cloud-upload-outline"
+                size={32}
+                color={theme.colors.text.muted}
+              />
+              <Text variant="body" color="secondary" className="mt-2">
+                Tap to pick a PDF
+              </Text>
+              <Text variant="caption" color="muted" className="mt-0.5">
+                Uploaded straight to storage via a signed URL
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      {submitting && stage === 'uploading' ? (
+        <View className="flex-row items-center gap-2 mb-3">
+          <ActivityIndicator size="small" color={theme.colors.primary[600]} />
+          <Text variant="caption" color="secondary">
+            Uploading to storage — keep the app open.
+          </Text>
+        </View>
+      ) : null}
+
       <Button
-        label="Create"
+        label={submitLabel(stage)}
         onPress={handleCreate}
-        disabled={title.trim().length === 0 || submitting}
+        disabled={title.trim().length === 0 || !pdf || submitting}
         loading={submitting}
         accessibilityLabel="Create podcast"
         icon="add-outline"
@@ -159,56 +327,3 @@ export const PodcastCreateScreen: React.FC<CreateProps> = ({ navigation }) => {
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background.main },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.lg,
-  },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { padding: theme.spacing.lg, paddingTop: 0 },
-  card: { marginBottom: theme.spacing.md },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.primary[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  cardBody: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  createContainer: { padding: theme.spacing.lg, flexGrow: 1, backgroundColor: theme.colors.background.main },
-  createHeader: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  createIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.colors.primary[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.card,
-  },
-  createTitle: {
-    marginBottom: theme.spacing.xs,
-    color: theme.colors.primary[700],
-  },
-  createSubtitle: {
-    textAlign: 'center',
-  },
-  errorBox: { marginBottom: theme.spacing.md },
-});

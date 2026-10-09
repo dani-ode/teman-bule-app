@@ -6,6 +6,9 @@ import {
   CallSession,
   CallSessionListItem,
   Podcast,
+  PodcastIngestionStatus,
+  PodcastListItem,
+  PodcastPlayback,
   PodcastSource,
 } from '@/domain/realtime/realtime.types';
 import { AgentCode } from '@/domain/practice/practice.types';
@@ -14,6 +17,9 @@ import {
   callListItemResponseSchema,
   callResponseSchema,
   joinTokenResponseSchema,
+  podcastIngestionStatusResponseSchema,
+  podcastListItemResponseSchema,
+  podcastPlaybackResponseSchema,
   podcastResponseSchema,
   podcastSourceResponseSchema,
 } from './dto/domain.dto';
@@ -126,6 +132,20 @@ export class ApiPodcastService implements IPodcastService {
     return { podcastId: data.podcast_id, title: data.title, state: data.state };
   }
 
+  public async listPodcasts(input?: { limit?: number }): Promise<PodcastListItem[]> {
+    const qs = input?.limit ? `?limit=${input.limit}` : '';
+    const data = decode(
+      z.array(podcastListItemResponseSchema),
+      await this.http.request({ method: 'GET', path: `/podcasts${qs}` }),
+    );
+    return data.map((p) => ({
+      podcastId: p.podcast_id,
+      title: p.title,
+      state: p.state,
+      createdAt: p.created_at,
+    }));
+  }
+
   public async addSource(podcastId: string, mediaId: string): Promise<PodcastSource> {
     const data = decode(
       podcastSourceResponseSchema,
@@ -139,6 +159,45 @@ export class ApiPodcastService implements IPodcastService {
       sourceVersionId: data.source_version_id,
       revision: data.revision,
       parseStatus: data.parse_status,
+    };
+  }
+
+  public async getIngestionStatus(podcastId: string): Promise<PodcastIngestionStatus> {
+    const data = decode(
+      podcastIngestionStatusResponseSchema,
+      await this.http.request({
+        method: 'GET',
+        path: `/podcasts/${podcastId}/ingestion-status`,
+      }),
+    );
+    return {
+      podcastId: data.podcast_id,
+      state: data.state,
+      sourceVersionId: data.source_version_id,
+      parseStatus: data.parse_status,
+      pageCount: data.page_count,
+    };
+  }
+
+  public async play(podcastId: string, targetDurationSeconds: number): Promise<PodcastPlayback> {
+    const data = decode(
+      podcastPlaybackResponseSchema,
+      await this.http.request({
+        method: 'POST',
+        path: `/podcasts/${podcastId}/playbacks`,
+        body: { target_duration_seconds: targetDurationSeconds },
+      }),
+    );
+    return {
+      playbackId: data.playback_id,
+      podcastId: data.podcast_id,
+      scriptVersionId: data.script_version_id,
+      sessionId: data.session_id,
+      state: data.state,
+      segmentCursor: data.segment_cursor,
+      offsetMs: data.offset_ms,
+      elapsedMs: data.elapsed_ms,
+      endReason: data.end_reason,
     };
   }
 }

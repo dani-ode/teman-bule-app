@@ -53,8 +53,37 @@ export interface Podcast {
   readonly state: string;
 }
 
+export interface PodcastListItem {
+  readonly podcastId: string;
+  readonly title: string;
+  readonly state: string;
+  readonly createdAt: string;
+}
+
 export interface PodcastSource {
   readonly sourceVersionId: string;
   readonly revision: number;
   readonly parseStatus: string;
+}
+
+/** Status ingestion dokumen (dipoll sampai parsed/failed). */
+export interface PodcastIngestionStatus {
+  readonly podcastId: string;
+  readonly state: string;
+  readonly sourceVersionId: string | null;
+  readonly parseStatus: string | null;
+  readonly pageCount: number | null;
+}
+
+/** Playback podcast: 1 play = 1 script version baru = 1 session baru. */
+export interface PodcastPlayback {
+  readonly playbackId: string;
+  readonly podcastId: string;
+  readonly scriptVersionId: string;
+  readonly sessionId: string;
+  readonly state: string;
+  readonly segmentCursor: number;
+  readonly offsetMs: number;
+  readonly elapsedMs: number;
+  readonly endReason: string | null;
 }

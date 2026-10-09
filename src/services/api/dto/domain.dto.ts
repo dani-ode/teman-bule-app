@@ -188,12 +188,44 @@ export const podcastResponseSchema = z.object({
 });
 export type PodcastResponse = z.infer<typeof podcastResponseSchema>;
 
+export const podcastListItemResponseSchema = z.object({
+  podcast_id: z.string(),
+  title: z.string(),
+  state: z.string(),
+  created_at: z.string(),
+});
+export type PodcastListItemResponse = z.infer<typeof podcastListItemResponseSchema>;
+
 export const podcastSourceResponseSchema = z.object({
   source_version_id: z.string(),
   revision: z.number().int(),
   parse_status: z.string(),
 });
 export type PodcastSourceResponse = z.infer<typeof podcastSourceResponseSchema>;
+
+export const podcastIngestionStatusResponseSchema = z.object({
+  podcast_id: z.string(),
+  state: z.string(),
+  source_version_id: z.string().nullable(),
+  parse_status: z.string().nullable(),
+  page_count: z.number().int().nullable(),
+});
+export type PodcastIngestionStatusResponse = z.infer<
+  typeof podcastIngestionStatusResponseSchema
+>;
+
+export const podcastPlaybackResponseSchema = z.object({
+  playback_id: z.string(),
+  podcast_id: z.string(),
+  script_version_id: z.string(),
+  session_id: z.string(),
+  state: z.string(),
+  segment_cursor: z.number().int(),
+  offset_ms: z.number().int(),
+  elapsed_ms: z.number().int(),
+  end_reason: z.string().nullable(),
+});
+export type PodcastPlaybackResponse = z.infer<typeof podcastPlaybackResponseSchema>;
 
 // --- media ---
 export const uploadResponseSchema = z.object({

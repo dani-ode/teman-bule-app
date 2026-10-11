@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+
+# Expo
 .expo/
 dist/
 web-build/
@@ -12,9 +14,18 @@ ios/
 # production
 build/
 
+# testing / coverage
+coverage/
+junit.xml
+
+# cache
+.cache/
+.turbo/
+
 # misc
 .DS_Store
 *.pem
+*.log
 
 # debug
 npm-debug.log*
@@ -28,6 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# editors
+.vscode/
+.idea/
+
 # local agent tooling
 .agents/
 .bob/
+
+# local screenshots / captures
+screenshot/

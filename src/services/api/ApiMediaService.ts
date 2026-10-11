@@ -1,5 +1,9 @@
-import { z } from 'zod';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
+import {
+  downloadUrlResponseSchema,
+  mediaResponseSchema,
+  uploadResponseSchema,
+} from './dto/domain.dto';
 
 export interface MediaUploadResult {
   readonly mediaId: string;
@@ -13,20 +17,6 @@ export interface MediaFinalizeResult {
   readonly status: string;
   readonly scanState: string;
 }
-
-const uploadResponseSchema = z.object({
-  media_id: z.string(),
-  storage_key: z.string(),
-  status: z.string(),
-  upload_url: z.string().nullable(),
-});
-
-const mediaResponseSchema = z.object({
-  media_id: z.string(),
-  media_type: z.string(),
-  status: z.string(),
-  scan_state: z.string(),
-});
 
 /**
  * Media service untuk upload audio/file ke S3 via presigned URL.
@@ -77,7 +67,13 @@ export class ApiMediaService {
     };
   }
 
-  /** Upload file blob ke S3 via presigned URL. */
+  /**
+   * Upload file ke S3/MinIO via presigned PUT URL.
+   *
+   * Signed URL sudah membawa kredensial scoped; JANGAN meneruskan app bearer
+   * token ke object storage (R05/auth-security). Content-Type eksplisit audio
+   * karena blob RN sering bertipe kosong/octet-stream.
+   */
   public async uploadToS3(uploadUrl: string, fileUri: string): Promise<void> {
     const response = await fetch(fileUri);
     const blob = await response.blob();
@@ -85,7 +81,7 @@ export class ApiMediaService {
       method: 'PUT',
       body: blob,
       headers: {
-        'Content-Type': blob.type || 'audio/m4a',
+        'Content-Type': 'audio/mpeg',
       },
     });
     if (!uploadResponse.ok) {
@@ -93,15 +89,55 @@ export class ApiMediaService {
     }
   }
 
-  /** Get download URL untuk media yang sudah finalized. */
+  /**
+   * Probe kesiapan media lewat endpoint yang BENAR-BENAR ada di kontrak
+   * backend (`GET /media/{id}/download-url`). Endpoint ini owner-scoped dan
+   * hanya berhasil bila media terdaftar & dapat dipakai; ia melempar
+   * ClientError terstruktur (404 forbidden/not_found bila belum siap).
+   *
+   * CATATAN KONTRAK: backend media.py TIDAK mengekspos `GET /media/{id}`
+   * status poller. Finalize sudah mengembalikan status secara sinkron
+   * (`finalized`/`clean` bila scanner aktif), sehingga polling hanya dipakai
+   * sebagai fail-closed guard saat finalize kembali `pending` (scanner async).
+   */
   public async getDownloadUrl(mediaId: string): Promise<string> {
     const data = decode(
-      z.object({ download_url: z.string() }),
+      downloadUrlResponseSchema,
       await this.http.request({
         method: 'GET',
         path: `/media/${mediaId}/download-url`,
       }),
     );
     return data.download_url;
+  }
+
+  /**
+   * Pastikan media siap dipakai sebagai voice message (fail-closed, R04).
+   *
+   * Sumber kebenaran status adalah response `finalizeUpload` itu sendiri:
+   * backend menjalankan malware scan SECARA SINKRON saat finalize, sehingga:
+   * - `finalized` + `clean`  → siap dipakai.
+   * - `rejected` / `malicious` → ditolak, jangan pernah dikirim.
+   * - `uploaded` + `pending` → scanner sedang tidak tersedia; backend akan
+   *   menolak voice message dengan `MEDIA_NOT_READY` (fail-closed).
+   *
+   * CATATAN KONTRAK: backend `media.py` TIDAK mengekspos `GET /media/{id}`
+   * status poller, dan `download-url` tetap berhasil pada media `pending`,
+   * sehingga TIDAK ada endpoint status yang bisa di-poll untuk memastikan
+   * transisi `pending → clean`. Karena scan sinkron, status `pending` berarti
+   * scanner down — polling tidak akan mengubahnya. Maka method ini bersifat
+   * strict: hanya lolos bila finalize sudah `finalized`+`clean`, selain itu
+   * lempar error eksplisit agar UI tidak mengirim voice yang pasti ditolak.
+   */
+  public assertMediaReady(finalizeResult: MediaFinalizeResult): MediaFinalizeResult {
+    if (finalizeResult.status === 'rejected' || finalizeResult.scanState === 'malicious') {
+      throw new Error('Media ditolak oleh pemindai keamanan.');
+    }
+    if (finalizeResult.status === 'finalized' && finalizeResult.scanState === 'clean') {
+      return finalizeResult;
+    }
+    throw new Error(
+      'Media belum siap dipakai: pemindaian keamanan belum selesai. Coba lagi sebentar.',
+    );
   }
 }

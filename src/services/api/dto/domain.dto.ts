@@ -30,6 +30,29 @@ export const firstMessageResponseSchema = z.object({
 });
 export type FirstMessageResponse = z.infer<typeof firstMessageResponseSchema>;
 
+// Hasil chat turn (text/voice) dari Langflow via backend ChatService.
+// Sumber: backend modules/conversations/chat.py ChatResult + {"session_id", ...}.
+// Field audio TTS dikirim top-level: audio_url, object_key, bucket,
+// audio_duration_ms. `audio` (record) dipertahankan opsional utk kompatibilitas.
+export const chatTurnResultSchema = z.object({
+    session_id: z.string(),
+    message_id: z.string().optional(),
+    user_message_id: z.string().optional(),
+    schema_version: z.string(),
+    request_id: z.string(),
+    status: z.string(),
+    response_text: z.string(),
+    citations: z.array(z.record(z.string(), z.unknown())).optional(),
+    tool_outcomes: z.array(z.record(z.string(), z.unknown())).optional(),
+    audio_url: z.string().nullable().optional(),
+    audio_duration_ms: z.number().int().nullable().optional(),
+    object_key: z.string().nullable().optional(),
+    bucket: z.string().nullable().optional(),
+    audio: z.record(z.string(), z.unknown()).nullable().optional(),
+    background_dispatch_ref: z.string().nullable().optional(),
+});
+export type ChatTurnResult = z.infer<typeof chatTurnResultSchema>;
+
 export const createSessionResponseSchema = z.object({
   session_id: z.string(),
   kind: z.string(),
@@ -77,8 +100,27 @@ export const messageResponseSchema = z.object({
   sequence: z.number().int(),
   terminal_state: z.string(),
   created_at: z.string(),
+  // Konten pesan. Opsional di wire agar backward-compatible dengan list
+  // endpoint lama yang hanya mengembalikan envelope.
+  text: z.string().nullable().optional(),
+  modality: z.string().nullable().optional(),
+  // Link media_objects untuk audio terdaftar (voice message user); bisa
+  // dipakai refresh URL lewat GET /media/{media_id}/download-url.
+  media_id: z.string().nullable().optional(),
+  audio_url: z.string().nullable().optional(),
+  audio_duration_ms: z.number().int().nullable().optional(),
 });
 export type MessageResponse = z.infer<typeof messageResponseSchema>;
+
+/**
+ * Detail satu chat turn (user message + AI reply) yang dikembalikan endpoint
+ * send message (POST /practice/sessions/{id}/messages).
+ */
+export const chatTurnMessagesSchema = z.object({
+  user_message: messageResponseSchema,
+  ai_message: messageResponseSchema.nullable(),
+});
+export type ChatTurnMessages = z.infer<typeof chatTurnMessagesSchema>;
 
 // --- vocabulary ---
 export const vocabularyEntryResponseSchema = z.object({

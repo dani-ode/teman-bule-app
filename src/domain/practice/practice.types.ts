@@ -65,11 +65,32 @@ export interface ConversationMessage {
   readonly text?: string;
   /** 'audio' bila pesan membawa audio (chat mostly audio). */
   readonly modality?: string;
+  /** Link media_objects untuk audio terdaftar (voice message user). */
+  readonly mediaId?: string | null;
   /** URL audio S3/MinIO dari workflow (TTS). */
   readonly audioUrl?: string | null;
   readonly audioDurationMs?: number | null;
+  /** Local URI hasil rekaman (hanya untuk optimistic voice message user). */
+  readonly localAudioUri?: string;
   /** Present only for locally-pending messages. */
   readonly localText?: string;
   readonly pending?: boolean;
   readonly failed?: boolean;
+}
+
+/**
+ * Hasil satu chat turn (text/voice) yang diproses Langflow via backend.
+ * audio membawa metadata TTS (mis. URL audio S3/MinIO) bila ada.
+ */
+export interface ChatTurnResult {
+  readonly sessionId: string;
+  readonly schemaVersion: string;
+  readonly requestId: string;
+  readonly status: string;
+  readonly responseText: string;
+  readonly audio?: Record<string, unknown> | null;
+  /** AI reply yang sudah dipersist; langsung render tanpa refetch. */
+  readonly aiMessage?: ConversationMessage | null;
+  /** Pesan user yang sudah dipersist (bila dikirim server pada respons). */
+  readonly userMessage?: ConversationMessage | null;
 }

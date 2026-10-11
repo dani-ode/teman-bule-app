@@ -49,8 +49,7 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
     setError(null);
     setPendingCategoryId(category.categoryId);
     try {
-      // Buka session aktif terakhir untuk agent+kategori ini; jika tidak ada,
-      // buat session baru (backend memanggil workflow Langflow untuk chat pertama AI).
+      // Bila sudah ada session aktif untuk agent+kategori ini, buka langsung.
       const practiceService = getServices().practiceService;
       const existing = await practiceService.listSessions({
         agentCode: effectiveAgentCode,
@@ -66,12 +65,12 @@ export const ChatHomeScreen: React.FC<Props> = ({ navigation }) => {
         });
         return;
       }
-      const session = await createSession.mutateAsync({
-        agentCode: effectiveAgentCode,
-        categoryId: category.categoryId,
-      });
+
+      // Belum ada session: LEMPAR USER KE ROOM DULU dengan sessionId=null.
+      // Pembuatan session (yang memicu workflow Langflow untuk greeting)
+      // terjadi DI DALAM room agar user melihat rangkaian status "berpikir".
       navigation.navigate('Conversation', {
-        sessionId: session.sessionId,
+        sessionId: null,
         agentCode: effectiveAgentCode,
         categoryId: category.categoryId,
       });

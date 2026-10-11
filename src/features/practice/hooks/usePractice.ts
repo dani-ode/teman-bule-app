@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getServices } from '@/core/di/ServiceContainer';
-import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
+import { AgentCode, ChatTurnResult, ConversationMessage } from '@/domain/practice/practice.types';
 import { newIdempotencyKey } from '@/core/network/idempotency';
 import { dropPending, markPendingFailed } from './messageReducer';
 
@@ -86,12 +86,13 @@ export interface PendingMessage extends ConversationMessage {
 }
 
 export const useSendPracticeMessage = (sessionId: string | null) => {
-  const qc = useQueryClient();
   const [pendingMessages, setPendingMessages] = useState<PendingMessage[]>([]);
 
   const send = useCallback(
-    async (text: string) => {
-      if (!sessionId || text.trim().length === 0) return;
+    async (text: string): Promise<ChatTurnResult> => {
+      if (!sessionId || text.trim().length === 0) {
+        throw new Error('Cannot send an empty message.');
+      }
       const clientMessageId = newIdempotencyKey();
       const local: PendingMessage = {
         messageId: `local_${clientMessageId}`,
@@ -105,22 +106,22 @@ export const useSendPracticeMessage = (sessionId: string | null) => {
       };
       setPendingMessages((prev) => [...prev, local]);
       try {
-        const persisted = await getServices().practiceService.sendMessage({
+        const result = await getServices().practiceService.sendMessage({
           sessionId,
           text: text.trim(),
           clientMessageId,
         });
         setPendingMessages((prev) => dropPending(prev, local.messageId));
-        qc.setQueryData<ConversationMessage[]>(
-          ['practice', 'messages', sessionId],
-          (old: ConversationMessage[] | undefined) => [...(old ?? []), persisted],
-        );
+        // Reconcile dengan server dilakukan caller SETELAH AI reply tertulis
+        // ke cache — invalidate di sini berpacu dengan append AI reply dan
+        // bisa menimpa bubble AI (backend menyimpan user message duluan).
+        return result;
       } catch (error) {
         setPendingMessages((prev) => markPendingFailed(prev, local.messageId));
         throw error;
       }
     },
-    [sessionId, qc],
+    [sessionId],
   );
 
   const retry = useCallback(

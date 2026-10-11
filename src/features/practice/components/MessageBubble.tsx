@@ -6,6 +6,7 @@ import { PendingMessage } from '../hooks/usePractice';
 import { Text } from '@/ui/components/Text';
 import { Badge } from '@/ui/components/Badge';
 import { theme } from '@/ui/theme';
+import { VoiceMessageBubble } from '@/features/call/components/VoiceMessageBubble';
 
 export interface MessageBubbleProps {
   readonly message: ConversationMessage | PendingMessage;
@@ -18,7 +19,28 @@ const isPending = (m: ConversationMessage | PendingMessage): m is PendingMessage
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }) => {
   const isUser = message.role === 'user';
   const pending = isPending(message);
-  const text = pending ? message.localText : '';
+  // Pending → local optimistic text; persisted → text dari server.
+  const text = pending ? message.localText : (message.text ?? '');
+
+  // Voice message dari user: render sebagai audio bubble yang bisa diputar.
+  // Optimistic (localAudioUri) → file rekaman lokal; persisted → audioUrl server.
+  const voiceUri = isUser
+    ? (message.localAudioUri ??
+      (message.modality === 'audio' ? (message.audioUrl ?? null) : null))
+    : null;
+  const voiceDurationMs = message.audioDurationMs ?? 0;
+
+  if (voiceUri) {
+    return (
+      <View className="flex-row my-1 items-end justify-end">
+        <VoiceMessageBubble
+          uri={voiceUri}
+          durationMs={voiceDurationMs > 0 ? voiceDurationMs : 1000}
+          isOwn
+        />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -27,11 +49,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
         isUser ? 'justify-end' : 'justify-start',
       ].join(' ')}
     >
-      {!isUser ? (
-        <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center mr-2 mb-1">
-          <Ionicons name="person" size={16} color={theme.colors.primary[600]} />
-        </View>
-      ) : null}
       <View
         className={[
           'max-w-[80%] rounded-lg p-3 shadow-bubble',
@@ -56,7 +73,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
         {pending && message.failed ? (
           <Badge label="Failed to send" variant="warning" className="mb-1" />
         ) : null}
-        <Text variant="body" className={isUser ? 'text-ink-inverse' : 'text-ink-primary'}>
+        <Text variant="body" weight="regular" className={`text-[17px] leading-[24px] ${isUser ? 'text-white' : 'text-ink-primary'}`}>
           {text}
         </Text>
         {pending && message.failed && onRetry ? (

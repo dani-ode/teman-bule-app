@@ -3,6 +3,7 @@ import { IPracticeService } from '@/domain/practice/IPracticeService';
 import {
   AgentCode,
   AgentPersona,
+  ChatTurnResult,
   ConversationMessage,
   CreatedPracticeSession,
   PracticeCategory,
@@ -12,12 +13,24 @@ import {
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
 import {
   agentPersonaResponseSchema,
+  chatTurnMessagesSchema,
+  chatTurnResultSchema,
   createSessionResponseSchema,
   messageResponseSchema,
   practiceCategoryResponseSchema,
   sessionListItemResponseSchema,
   sessionResponseSchema,
 } from './dto/domain.dto';
+
+/** Wire ChatResult hasil decode `chatTurnResultSchema` (bentuk snake_case). */
+type ChatTurnResultData = z.infer<typeof chatTurnResultSchema>;
+
+/**
+ * Timeout panjang untuk endpoint yang secara sinkron memanggil workflow
+ * Langflow (LLM + STT/TTS). Di Postman call ini sukses karena tidak ada
+ * client timeout; di app default timeout (15s) terlalu pendek.
+ */
+const LANGFLOW_TIMEOUT_MS = 120_000;
 
 export class ApiPracticeService implements IPracticeService {
   constructor(private readonly http: HttpTransport) {}
@@ -47,8 +60,9 @@ export class ApiPracticeService implements IPracticeService {
     sequence: number;
     terminal_state: string;
     created_at: string;
-    text?: string;
-    modality?: string;
+    text?: string | null;
+    modality?: string | null;
+    media_id?: string | null;
     audio_url?: string | null;
     audio_duration_ms?: number | null;
   }): ConversationMessage {
@@ -59,8 +73,9 @@ export class ApiPracticeService implements IPracticeService {
       sequence: data.sequence,
       terminalState: data.terminal_state,
       createdAt: data.created_at,
-      text: data.text,
-      modality: data.modality,
+      text: data.text ?? undefined,
+      modality: data.modality ?? undefined,
+      mediaId: data.media_id ?? null,
       audioUrl: data.audio_url ?? null,
       audioDurationMs: data.audio_duration_ms ?? null,
     };
@@ -76,6 +91,7 @@ export class ApiPracticeService implements IPracticeService {
         method: 'POST',
         path: '/practice/sessions',
         body: { agent_code: input.agentCode, category_id: input.categoryId },
+        timeoutMs: LANGFLOW_TIMEOUT_MS,
       }),
     );
     return {
@@ -135,16 +151,112 @@ export class ApiPracticeService implements IPracticeService {
     sessionId: string;
     text: string;
     clientMessageId: string;
-  }): Promise<ConversationMessage> {
+  }): Promise<ChatTurnResult> {
+    // Response bisa berupa ChatResult envelope Langflow (bentuk produksi saat
+    // ini, sama seperti voice-messages), ATAU envelope chat-turn
+    // { user_message, ai_message }, ATAU satu message (legacy) — dukung
+    // semuanya agar AI reply langsung tampil tanpa menunggu refetch.
+    const raw = await this.http.request({
+      method: 'POST',
+      path: `/practice/sessions/${input.sessionId}/messages`,
+      body: { text: input.text, client_message_id: input.clientMessageId },
+      timeoutMs: LANGFLOW_TIMEOUT_MS,
+    });
+
+    const asResult = chatTurnResultSchema.safeParse(raw);
+    if (asResult.success) {
+      return this.mapChatTurnResult(asResult.data);
+    }
+
+    const asTurn = chatTurnMessagesSchema.safeParse(raw);
+    if (asTurn.success) {
+      const userMsg = asTurn.data.user_message;
+      const aiMsg = asTurn.data.ai_message;
+      return {
+        sessionId: userMsg.session_id,
+        schemaVersion: '',
+        requestId: '',
+        status: 'ok',
+        responseText: aiMsg?.text ?? '',
+        audio: null,
+        aiMessage: aiMsg ? this.mapMessage(aiMsg) : null,
+        userMessage: this.mapMessage(userMsg),
+      };
+    }
+
+    const single = decode(messageResponseSchema, raw);
+    return {
+      sessionId: single.session_id,
+      schemaVersion: '',
+      requestId: '',
+      status: 'ok',
+      responseText: single.text ?? '',
+      audio: single.audio_url ? { url: single.audio_url } : null,
+      aiMessage: single.role === 'agent' ? this.mapMessage(single) : null,
+      userMessage: null,
+    };
+  }
+
+  /**
+   * Map ChatResult wire (Langflow via backend ChatService) ke domain
+   * ChatTurnResult. Audio TTS dikirim top-level (audio_url,
+   * audio_duration_ms); fallback ke `audio.url`/`audio.duration_ms` bila
+   * backend membungkus dalam record `audio`.
+   */
+  private mapChatTurnResult(data: ChatTurnResultData): ChatTurnResult {
+    const nestedUrl =
+      data.audio && typeof data.audio.url === 'string'
+        ? (data.audio.url as string)
+        : null;
+    const audioUrl = data.audio_url ?? nestedUrl;
+    const nestedDuration =
+      data.audio && typeof data.audio.duration_ms === 'number'
+        ? (data.audio.duration_ms as number)
+        : null;
+    const audioDurationMs = data.audio_duration_ms ?? nestedDuration;
+    return {
+      sessionId: data.session_id,
+      schemaVersion: data.schema_version,
+      requestId: data.request_id,
+      status: data.status,
+      responseText: data.response_text,
+      audio: data.audio ?? null,
+      aiMessage: {
+        // Pakai message_id server bila ada; jangan memalsukan ID korelasi.
+        messageId: data.message_id ?? `ai-${data.request_id}`,
+        sessionId: data.session_id,
+        role: 'agent',
+        sequence: -1,
+        terminalState: 'final',
+        createdAt: new Date().toISOString(),
+        text: data.response_text,
+        modality: audioUrl ? 'audio' : 'text',
+        audioUrl,
+        audioDurationMs,
+      },
+    };
+  }
+
+  public async sendVoiceMessage(input: {
+    sessionId: string;
+    mediaId: string;
+    text?: string | null;
+    clientMessageId: string;
+  }): Promise<ChatTurnResult> {
     const data = decode(
-      messageResponseSchema,
+      chatTurnResultSchema,
       await this.http.request({
         method: 'POST',
-        path: `/practice/sessions/${input.sessionId}/messages`,
-        body: { text: input.text, client_message_id: input.clientMessageId },
+        path: `/practice/sessions/${input.sessionId}/voice-messages`,
+        body: {
+          media_id: input.mediaId,
+          text: input.text ?? null,
+          client_message_id: input.clientMessageId,
+        },
+        timeoutMs: LANGFLOW_TIMEOUT_MS,
       }),
     );
-    return this.mapMessage(data);
+    return this.mapChatTurnResult(data);
   }
 
   public async listMessages(sessionId: string, limit = 50): Promise<ConversationMessage[]> {

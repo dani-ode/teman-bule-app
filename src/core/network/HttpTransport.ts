@@ -33,6 +33,12 @@ export interface RequestOptions {
   readonly anonymous?: boolean;
   /** Skip the automatic 401 refresh flow (auth endpoints themselves). */
   readonly skipAuthRefresh?: boolean;
+  /**
+   * Override default timeout (envConfig.apiTimeoutMs) untuk request ini.
+   * Dipakai endpoint yang memicu workflow LLM/TTS (Langflow) yang bisa
+   * berjalan puluhan detik secara sinkron.
+   */
+  readonly timeoutMs?: number;
 }
 
 export interface SessionActions {
@@ -103,7 +109,8 @@ export class HttpTransport {
     accessToken: string | null,
   ): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), envConfig.apiTimeoutMs);
+    const timeoutMs = options.timeoutMs ?? envConfig.apiTimeoutMs;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     if (options.signal) {
       if (options.signal.aborted) {
         controller.abort();

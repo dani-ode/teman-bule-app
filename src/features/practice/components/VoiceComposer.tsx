@@ -5,6 +5,8 @@ import {
   requestRecordingPermissionsAsync,
   RecordingPresets,
   setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
@@ -40,6 +42,19 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
     isMeteringEnabled: true,
   });
   const recorderState = useAudioRecorderState(recorder, 100);
+
+  // Player untuk memutar ulang rekaman sebelum dikirim
+  const previewPlayer = useAudioPlayer(recordedUri);
+  const previewStatus = useAudioPlayerStatus(previewPlayer);
+
+  // Kembali ke awal saat playback selesai
+  useEffect(() => {
+    if (previewStatus.didJustFinish) {
+      void previewPlayer.seekTo(0);
+    }
+  }, [previewStatus.didJustFinish, previewPlayer]);
+
+  const isPreviewPlaying = previewStatus.playing;
 
   // Animation values untuk sound bars
   const barAnimations = useRef(
@@ -121,6 +136,17 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
     }
   }, [recorder, recorderState.isRecording, recorderState.durationMillis]);
 
+  // Tap-to-start / tap-to-stop (lebih andal daripada hold-to-record,
+  // karena onPressOut sering tidak terkirim di emulator/perangkat).
+  const toggleRecording = useCallback(() => {
+    if (disabled) return;
+    if (recorderState.isRecording) {
+      void stopRecording();
+    } else {
+      void startRecording();
+    }
+  }, [disabled, recorderState.isRecording, startRecording, stopRecording]);
+
   const handleSendVoice = useCallback(() => {
     if (recordedUri && recordingDuration > 0) {
       onSendVoice(recordedUri, recordingDuration);
@@ -128,7 +154,6 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       setRecordingDuration(0);
     }
   }, [recordedUri, recordingDuration, onSendVoice]);
-
   const handleSendText = useCallback(() => {
     const trimmed = textInput.trim();
     if (trimmed.length > 0 && !disabled) {
@@ -138,17 +163,35 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   }, [textInput, disabled, onSendText]);
 
   const handleDeleteVoice = useCallback(() => {
+    if (previewStatus.playing) {
+      previewPlayer.pause();
+    }
+    void previewPlayer.seekTo(0);
     setRecordedUri(null);
     setRecordingDuration(0);
-  }, []);
+  }, [previewPlayer, previewStatus.playing]);
+
+  const handleTogglePreview = useCallback(() => {
+    if (!recordedUri) return;
+
+    if (previewStatus.playing) {
+      previewPlayer.pause();
+    } else {
+      previewPlayer.play();
+    }
+  }, [recordedUri, previewPlayer, previewStatus.playing]);
 
   const toggleMode = useCallback(() => {
     setMode((prev) => (prev === 'voice' ? 'text' : 'voice'));
     // Clear states saat switch
+    if (previewStatus.playing) {
+      previewPlayer.pause();
+    }
+    void previewPlayer.seekTo(0);
     setTextInput('');
     setRecordedUri(null);
     setRecordingDuration(0);
-  }, []);
+  }, [previewPlayer, previewStatus.playing]);
 
   const isRecording = recorderState.isRecording;
   const hasVoiceRecorded = recordedUri !== null;
@@ -192,7 +235,26 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       {/* Voice preview setelah recording */}
       {hasVoiceRecorded && !isRecording && (
         <View className="flex-row items-center bg-khaki-100 rounded-lg px-3 py-2 mb-2">
-          <Ionicons name="mic" size={20} color={theme.colors.primary[600]} />
+          <Pressable
+            onPress={handleTogglePreview}
+            hitSlop={8}
+            accessibilityLabel={
+              isPreviewPlaying ? 'Stop voice preview' : 'Play voice preview'
+            }
+            className="p-1"
+          >
+            <Ionicons
+              name={isPreviewPlaying ? 'pause' : 'play'}
+              size={22}
+              color={theme.colors.primary[600]}
+            />
+          </Pressable>
+          <Ionicons
+            name="mic"
+            size={20}
+            color={theme.colors.primary[600]}
+            style={{ marginLeft: theme.spacing.xs }}
+          />
           <Text variant="body" className="flex-1 ml-2">
             Voice message ({formatDuration(recordingDuration)})
           </Text>
@@ -248,11 +310,10 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
         {/* Center: main action button */}
         {mode === 'voice' ? (
           <Pressable
-            onPressIn={startRecording}
-            onPressOut={stopRecording}
+            onPress={toggleRecording}
             disabled={disabled}
             accessibilityRole="button"
-            accessibilityLabel={isRecording ? 'Release to stop recording' : 'Hold to record'}
+            accessibilityLabel={isRecording ? 'Tap to stop recording' : 'Tap to start recording'}
             accessibilityState={{ disabled }}
             className={[
               'w-16 h-16 rounded-full items-center justify-center shadow-elevated',
@@ -310,7 +371,7 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       {/* Helper text */}
       {!isRecording && !hasVoiceRecorded && mode === 'voice' && (
         <Text variant="caption" color="muted" align="center" className="mt-2">
-          Hold the microphone button to record
+          Tap the microphone to start recording, tap again to stop
         </Text>
       )}
     </View>

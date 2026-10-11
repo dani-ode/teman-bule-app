@@ -1,6 +1,7 @@
 import {
   AgentCode,
   AgentPersona,
+  ChatTurnResult,
   ConversationMessage,
   CreatedPracticeSession,
   PracticeCategory,
@@ -21,8 +22,15 @@ export interface IPracticeService {
     sessionId: string;
     text: string;
     clientMessageId: string;
-  }): Promise<ConversationMessage>;
+  }): Promise<ChatTurnResult>;
   listMessages(sessionId: string, limit?: number): Promise<ConversationMessage[]>;
+  /** Voice note: media audio sudah finalized; Langflow melakukan STT+TTS. */
+  sendVoiceMessage(input: {
+    sessionId: string;
+    mediaId: string;
+    text?: string | null;
+    clientMessageId: string;
+  }): Promise<ChatTurnResult>;
   completeSession(sessionId: string): Promise<PracticeSession>;
   /** Daftar session chat milik user dengan filter. */
   listSessions(input?: {

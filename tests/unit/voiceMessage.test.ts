@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chatTurnResultSchema } from '@/services/api/dto/domain.dto';
+import { chatTurnResultSchema, transcribeResponseSchema } from '@/services/api/dto/domain.dto';
 import { ApiMediaService, MediaFinalizeResult } from '@/services/api/ApiMediaService';
 
 /**
@@ -39,6 +39,67 @@ describe('chatTurnResultSchema (voice turn wire)', () => {
       response_text: 'Text only',
     });
     expect(parsed.audio_url).toBeUndefined();
+  });
+});
+
+/**
+ * Kontrak flow voice message 3-hit: upload → transcribe → send message.
+ * Transcribe endpoint: POST /media/{media_id}:transcribe → { text }.
+ */
+describe('transcribeResponseSchema (POST /media/{id}:transcribe)', () => {
+  it('decodes text transcript dari backend', () => {
+    const parsed = transcribeResponseSchema.parse({
+      text: 'I wanna go to Paris in this week.',
+    });
+    expect(parsed.text).toBe('I wanna go to Paris in this week.');
+  });
+
+  it('menolak response tanpa field text', () => {
+    expect(() => transcribeResponseSchema.parse({})).toThrow();
+    expect(() => transcribeResponseSchema.parse({ transcript: 'wrong key' })).toThrow();
+  });
+});
+
+/**
+ * Kontrak body request voice message: client mengirim text (hasil transcribe)
+ * dan audio_duration_ms (dari recorder) ke voice-messages(:stream).
+ */
+describe('voice message request body (3-hit flow)', () => {
+  const buildVoiceBody = (input: {
+    mediaId: string;
+    text?: string | null;
+    audioDurationMs?: number | null;
+    clientMessageId: string;
+  }) => ({
+    media_id: input.mediaId,
+    text: input.text ?? null,
+    audio_duration_ms: input.audioDurationMs ?? null,
+    client_message_id: input.clientMessageId,
+  });
+
+  it('menyertakan text dan audio_duration_ms saat keduanya tersedia', () => {
+    expect(
+      buildVoiceBody({
+        mediaId: 'm1',
+        text: 'I wanna go to Paris in this week.',
+        audioDurationMs: 3800,
+        clientMessageId: 'idem_1',
+      }),
+    ).toEqual({
+      media_id: 'm1',
+      text: 'I wanna go to Paris in this week.',
+      audio_duration_ms: 3800,
+      client_message_id: 'idem_1',
+    });
+  });
+
+  it('tetap mengirim null untuk field yang absen (backward compatible)', () => {
+    expect(buildVoiceBody({ mediaId: 'm1', clientMessageId: 'idem_1' })).toEqual({
+      media_id: 'm1',
+      text: null,
+      audio_duration_ms: null,
+      client_message_id: 'idem_1',
+    });
   });
 });
 

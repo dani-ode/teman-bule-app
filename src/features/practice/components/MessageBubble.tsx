@@ -11,12 +11,24 @@ import { VoiceMessageBubble } from '@/features/call/components/VoiceMessageBubbl
 export interface MessageBubbleProps {
   readonly message: ConversationMessage | PendingMessage;
   readonly onRetry?: () => void;
+  /** Apakah voice note pesan ini yang sedang berbunyi di player tunggal. */
+  readonly voicePlaying?: boolean;
+  /** Progress 0..1 dari player tunggal untuk voice note. */
+  readonly voiceProgress?: number;
+  /** Toggle play/pause voice note (player tunggal di screen). */
+  readonly onVoiceToggle?: () => void;
 }
 
 const isPending = (m: ConversationMessage | PendingMessage): m is PendingMessage =>
   'pending' in m && m.pending === true;
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  onRetry,
+  voicePlaying = false,
+  voiceProgress = 0,
+  onVoiceToggle,
+}) => {
   const isUser = message.role === 'user';
   const pending = isPending(message);
   // Pending → local optimistic text; persisted → text dari server.
@@ -37,6 +49,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
           uri={voiceUri}
           durationMs={voiceDurationMs > 0 ? voiceDurationMs : 1000}
           isOwn
+          playing={voicePlaying}
+          onToggle={onVoiceToggle ?? (() => undefined)}
+          progress={voiceProgress}
         />
       </View>
     );

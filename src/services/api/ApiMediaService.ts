@@ -2,6 +2,7 @@ import { HttpTransport, decode } from '@/core/network/HttpTransport';
 import {
   downloadUrlResponseSchema,
   mediaResponseSchema,
+  transcribeResponseSchema,
   uploadResponseSchema,
 } from './dto/domain.dto';
 
@@ -17,6 +18,12 @@ export interface MediaFinalizeResult {
   readonly status: string;
   readonly scanState: string;
 }
+
+/**
+ * Timeout panjang untuk STT: transcribe audio bisa memakan waktu puluhan
+ * detik tergantung durasi rekaman, melebihi default timeout client (15s).
+ */
+const TRANSCRIBE_TIMEOUT_MS = 60_000;
 
 /**
  * Media service untuk upload audio/file ke S3 via presigned URL.
@@ -87,6 +94,26 @@ export class ApiMediaService {
     if (!uploadResponse.ok) {
       throw new Error(`S3 upload failed: ${uploadResponse.status}`);
     }
+  }
+
+  /**
+   * Transcribe audio yang sudah finalized menjadi text (STT).
+   *
+   * Dipakai pada flow voice message 3-hit: setelah upload finalized, client
+   * meminta transcript di sini, lalu mengirim voice message dengan `text` dan
+   * `audio_duration_ms` agar backend tidak perlu STT ulang dan durasi user
+   * tersimpan akurat dari recorder client.
+   */
+  public async transcribe(mediaId: string): Promise<string> {
+    const data = decode(
+      transcribeResponseSchema,
+      await this.http.request({
+        method: 'POST',
+        path: `/media/${mediaId}:transcribe`,
+        timeoutMs: TRANSCRIBE_TIMEOUT_MS,
+      }),
+    );
+    return data.text;
   }
 
   /**

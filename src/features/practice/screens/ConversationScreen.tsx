@@ -6,12 +6,17 @@ import { ChatStackParamList } from '@/core/navigation/types';
 import {
   usePracticeMessages,
   usePracticeSession,
-  useSendPracticeMessage,
   useAgentPersonas,
   usePracticeCategories,
   PendingMessage,
 } from '../hooks/usePractice';
+import {
+  useSendPracticeMessageStream,
+  useSendVoiceMessageStream,
+  useCreatePracticeSessionStream,
+} from '../hooks/usePracticeStream';
 import { mergeMessages, MergedMessage } from '../hooks/messageReducer';
+import { useConversationAudioPlayer } from '../hooks/useConversationAudioPlayer';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { getServices } from '@/core/di/ServiceContainer';
 import { Text } from '@/ui/components/Text';
@@ -20,135 +25,101 @@ import { ErrorState, EmptyState } from '@/ui/components/States';
 import { theme } from '@/ui/theme';
 import { MessageBubble } from '../components/MessageBubble';
 import { AgentAudioBubble } from '../components/AgentAudioBubble';
-import { LoadingStatus, LoadingStep } from '../components/LoadingStatus';
 import { VoiceComposer } from '../components/VoiceComposer';
 import { ChatHeader } from '../components/ChatHeader';
 import { HistoryBottomSheet } from '../components/HistoryBottomSheet';
 import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
 import { digestFileSha256 } from '@/services/api/mediaChecksum';
+import { newIdempotencyKey } from '@/core/network/idempotency';
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'Conversation'>;
-
-/** Rangkaian status saat room dibuat untuk session baru (greeting AI). */
-const buildGreetingSteps = (agentName: string): LoadingStep[] => [
-  { label: `Connection to ${agentName} ...`, minMs: 900, maxMs: 1600 },
-  { label: 'Connected ...', minMs: 500, maxMs: 900 },
-  { label: `${agentName} Generating Scenario ...`, minMs: 1500, maxMs: 2500 },
-  { label: 'Scenario Generated.', minMs: 500, maxMs: 900 },
-  { label: `${agentName} Recording ....`, minMs: 15000, maxMs: 25000 },
-  { label: 'Processing ...', minMs: 0, maxMs: 0, holdUntilDone: true },
-];
-
-/** Rangkaian status untuk turn berikutnya. */
-const buildTurnSteps = (kind: 'text' | 'voice'): LoadingStep[] => [
-  kind === 'text'
-    ? { label: 'Reading ...', minMs: 700, maxMs: 1400 }
-    : { label: 'Listening ...', minMs: 700, maxMs: 1400 },
-  { label: 'Recording ....', minMs: 15000, maxMs: 25000 },
-  { label: 'Processing ...', minMs: 0, maxMs: 0, holdUntilDone: true },
-];
 
 export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId: routeSessionId, agentCode, categoryId } = route.params;
   const queryClient = useQueryClient();
-
-  // sessionId efektif: dari route (existing) atau dari hasil create di room.
   const [sessionId, setSessionId] = useState<string | null>(routeSessionId ?? null);
   const [isResuming, setIsResuming] = useState(false);
-
-  /**
-   * ID pesan yang sudah tersimpan di server SEBELUM bubble-nya pernah
-   * dirender di room ini. Dipakai untuk membedakan "pesan riwayat" (jangan
-   * autoplay audio & jangan animasi ketik) vs "balasan AI baru yang datang
-   * saat user berada di room" (boleh autoplay + typewriter).
-   */
   const hydratedMessageIdsRef = useRef<Set<string>>(new Set());
-  const sessionWithRenderedBubblesRef = useRef<string | null>(null);
+  const [hydratedSessionKey, setHydratedSessionKey] = useState<string | null>(null);
+  const flatListRef = useRef<FlatList<MergedMessage>>(null);
 
   const session = usePracticeSession(sessionId);
   const messages = usePracticeMessages(sessionId);
   const agentsQuery = useAgentPersonas();
   const categoriesQuery = usePracticeCategories();
-  const { pendingMessages, send, retry } = useSendPracticeMessage(sessionId);
+
+  const { pendingMessages, send: sendTextStream, retry, streamingState: textStreamingState } = useSendPracticeMessageStream(sessionId);
+  const { sendVoice: sendVoiceStream, streamingState: voiceStreamingState } = useSendVoiceMessageStream(sessionId);
+  const { createSession: createSessionStream, streamingState: greetingStreamingState } = useCreatePracticeSessionStream();
 
   const [sendError, setSendError] = useState<string | null>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
-
-  // Orkestrasi status "AI berpikir".
-  const [activeSteps, setActiveSteps] = useState<LoadingStep[] | null>(null);
-  const [requestDone, setRequestDone] = useState(false);
-  const [statusVisible, setStatusVisible] = useState(false);
   const createSessionStarted = useRef(false);
 
-  // Get current agent and category info
-  const currentAgent = useMemo(() => {
-    return agentsQuery.data?.find((a) => a.code === agentCode) ?? null;
-  }, [agentsQuery.data, agentCode]);
+  // SATU player audio untuk seluruh conversation (TTS AI + voice note user).
+  // Bubbles jadi controlled → tidak ada player per-item yang bisa ter-release.
+  const audio = useConversationAudioPlayer();
+  // Guard autoplay agar pesan yang sama tidak diputar ulang (idempotent).
+  const autoplayedIdsRef = useRef<Set<string>>(new Set());
+  // Antrean id pesan audio baru yang perlu diautoplay setelah list ter-render.
+  const pendingAutoplayRef = useRef<string[]>([]);
 
-  const currentCategory = useMemo(() => {
-    return categoriesQuery.data?.find((c) => c.categoryId === categoryId) ?? null;
-  }, [categoriesQuery.data, categoryId]);
+  const currentAgent = useMemo(() => agentsQuery.data?.find(a => a.code === agentCode) ?? null, [agentsQuery.data, agentCode]);
+  const currentCategory = useMemo(() => categoriesQuery.data?.find(c => c.categoryId === categoryId) ?? null, [categoriesQuery.data, categoryId]);
 
-  const agentName = currentAgent?.displayName ?? 'AI';
+  const merged: MergedMessage[] = mergeMessages(messages.data ?? [], pendingMessages);
 
-  /**
-   * Greeting sesi baru (dibuat di dalam room) juga harus autoplay +
-   * typewriter: pesan itu datang SETELAH user berada di room.
-   */
-  const markMessagesAsNew = useCallback((ids: ReadonlyArray<string>) => {
-    const hydrated = hydratedMessageIdsRef.current;
-    for (const id of ids) {
-      hydrated.delete(id);
+  // Track which messages are "new" (arrived after hydration) for autoplay
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set());
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (merged.length > 0 && hydratedSessionKey === sessionId) {
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+      return () => clearTimeout(timer);
     }
+  }, [merged.length, hydratedSessionKey, sessionId]);
+
+  // Initial scroll to bottom when entering room
+  useEffect(() => {
+    if (hydratedSessionKey === sessionId && merged.length > 0) {
+      const timer = setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [hydratedSessionKey, sessionId]);
+
+  const markMessagesAsNew = useCallback((ids: ReadonlyArray<string>) => {
+    setNewMessageIds(prev => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return next;
+    });
+    const hydrated = hydratedMessageIdsRef.current;
+    for (const id of ids) hydrated.delete(id);
   }, []);
 
-  /**
-   * Buat session baru DI DALAM room. Backend memanggil workflow Langflow
-   * untuk chat pertama AI; selama menunggu, tampilkan rangkaian status.
-   */
   const runCreateSession = useCallback(async () => {
     setSendError(null);
-    setRequestDone(false);
-    setStatusVisible(true);
-    setActiveSteps(buildGreetingSteps(agentName));
     try {
-      const created = await getServices().practiceService.createSession({
-        agentCode,
-        categoryId,
-      });
-      if (created.firstMessage) {
-        queryClient.setQueryData<ConversationMessage[]>(
-          ['practice', 'messages', created.sessionId],
-          [created.firstMessage],
-        );
-        markMessagesAsNew([created.firstMessage.messageId]);
-      }
-      queryClient.invalidateQueries({ queryKey: ['practice', 'sessions'] });
-      setSessionId(created.sessionId);
-      // Sinkronkan route param agar aksi lain (delete/new chat) konsisten.
-      navigation.setParams({
-        sessionId: created.sessionId,
-        agentCode,
-        categoryId,
-      });
+      const { sessionId: newSessionId, firstMessage } = await createSessionStream({ agentCode, categoryId });
+      if (firstMessage) markMessagesAsNew([firstMessage.messageId]);
+      setSessionId(newSessionId);
+      navigation.setParams({ sessionId: newSessionId, agentCode, categoryId });
     } catch (err) {
       setSendError(userMessageForError(err).message);
-      setStatusVisible(false);
-      setActiveSteps(null);
-    } finally {
-      setRequestDone(true);
     }
-  }, [agentCode, agentName, categoryId, navigation, queryClient, markMessagesAsNew]);
+  }, [agentCode, categoryId, navigation, createSessionStream, markMessagesAsNew]);
 
-  // Auto-create session saat masuk room tanpa sessionId.
-  // Jika ada routeSessionId, coba resume session yang sudah ada.
   useEffect(() => {
     if (sessionId === null && !createSessionStarted.current) {
       createSessionStarted.current = true;
       if (routeSessionId) {
-        // Resume: set sessionId langsung, biar usePracticeMessages fetch dari server
         setSessionId(routeSessionId);
         setIsResuming(true);
       } else {
@@ -157,86 +128,28 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [sessionId, routeSessionId, runCreateSession]);
 
-  // Lepas status "resuming" begitu riwayat pesan selesai dimuat.
   useEffect(() => {
-    if (isResuming && messages.isSuccess) {
-      setIsResuming(false);
-    }
+    if (isResuming && messages.isSuccess) setIsResuming(false);
   }, [isResuming, messages.isSuccess]);
-
-  const beginTurnStatus = useCallback((kind: 'text' | 'voice') => {
-    setRequestDone(false);
-    setStatusVisible(true);
-    setActiveSteps(buildTurnSteps(kind));
-  }, []);
-
-  const finishTurnStatus = useCallback(() => {
-    setRequestDone(true);
-  }, []);
-
-  const appendAiMessage = useCallback(
-    (ai: ConversationMessage | null | undefined) => {
-      if (!ai || !sessionId) return;
-      queryClient.setQueryData<ConversationMessage[]>(
-        ['practice', 'messages', sessionId],
-        (old: ConversationMessage[] | undefined) => {
-          const list = old ?? [];
-          if (list.some((m) => m.messageId === ai.messageId)) return list;
-          return [...list, ai];
-        },
-      );
-    },
-    [queryClient, sessionId],
-  );
-
-  /**
-   * Sisipkan pesan user hasil persist server ke cache SEKARANG, lalu tahan
-   * refetch singkat agar response yang datang lebih dulu tidak menimpa
-   * balasan AI yang baru saja ditulis ke cache (race invalidate vs append).
-   */
-  const insertUserMessage = useCallback(
-    (msg: ConversationMessage | null | undefined) => {
-      if (!msg || !sessionId) return;
-      queryClient.setQueryData<ConversationMessage[]>(
-        ['practice', 'messages', sessionId],
-        (old: ConversationMessage[] | undefined) => {
-          const list = old ?? [];
-          if (list.some((m) => m.messageId === msg.messageId)) return list;
-          return [...list, msg];
-        },
-      );
-      queryClient.cancelQueries({
-        queryKey: ['practice', 'messages', sessionId],
-      });
-    },
-    [queryClient, sessionId],
-  );
 
   const handleSendText = async (text: string) => {
     if (!sessionId) return;
     setSendError(null);
-    beginTurnStatus('text');
+    audio.stop();
     try {
-      const result = await send(text);
-      insertUserMessage(result.userMessage);
-      appendAiMessage(result.aiMessage);
-      // Reconcile dengan server di background SETELAH AI reply tertulis,
-      // agar balasan AI tidak tertimpa refetch yang lebih awal.
+      const result = await sendTextStream(text);
+      if (result.aiMessage) markMessagesAsNew([result.aiMessage.messageId]);
       void messages.refetch();
     } catch (err) {
       setSendError(userMessageForError(err).message);
-    } finally {
-      finishTurnStatus();
     }
   };
 
   const handleSendVoice = async (uri: string, durationMs: number) => {
     if (!sessionId) return;
     setSendError(null);
-    beginTurnStatus('voice');
+    audio.stop();
 
-    // Optimistic bubble: tampilkan voice message user langsung agar tidak
-    // terasa "hilang". Akan digantikan data server (transkrip) saat refetch.
     const optimisticId = `local-voice-${Date.now()}`;
     const optimisticMsg: ConversationMessage = {
       messageId: optimisticId,
@@ -249,74 +162,40 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
       localAudioUri: uri,
       audioDurationMs: durationMs,
     };
-    queryClient.setQueryData<ConversationMessage[]>(
-      ['practice', 'messages', sessionId],
-      (old) => [...(old ?? []), optimisticMsg],
-    );
+    queryClient.setQueryData<ConversationMessage[]>(['practice', 'messages', sessionId], old => [...(old ?? []), optimisticMsg]);
 
     try {
-      // Orkestrasi upload voice note sesuai kontrak backend:
-      // register → PUT langsung ke MinIO (presigned) → finalize → kirim
-      // media_id ke chat (backend teruskan ke Langflow untuk STT+TTS).
+      // HIT 1: Upload ke MinIO (register → PUT presigned → finalize).
       const { sha256Hex, sizeBytes } = await digestFileSha256(uri);
-      if (sizeBytes <= 0) {
-        throw new Error('Rekaman suara kosong.');
-      }
+      if (sizeBytes <= 0) throw new Error('Rekaman suara kosong.');
 
-      // 1. Register upload → dapat media_id + presigned PUT URL.
-      const uploadResult = await getServices().mediaService.registerUpload({
-        mediaType: 'audio',
-        sizeBytes,
-      });
-      if (!uploadResult.uploadUrl) {
-        throw new Error('Upload URL not available');
-      }
+      const uploadResult = await getServices().mediaService.registerUpload({ mediaType: 'audio', sizeBytes });
+      if (!uploadResult.uploadUrl) throw new Error('Upload URL not available');
 
-      // 2. PUT file langsung ke MinIO via presigned URL (tanpa bearer token).
       await getServices().mediaService.uploadToS3(uploadResult.uploadUrl, uri);
-
-      // 3. Finalize dengan checksum SHA-256 nyata (bukan placeholder).
-      const finalizeResult = await getServices().mediaService.finalizeUpload({
-        mediaId: uploadResult.mediaId,
-        checksum: sha256Hex,
-        actualBytes: sizeBytes,
-      });
-
-      // 4. Fail-closed: pastikan media lolos scan sebelum dikirim ke chat.
+      const finalizeResult = await getServices().mediaService.finalizeUpload({ mediaId: uploadResult.mediaId, checksum: sha256Hex, actualBytes: sizeBytes });
       getServices().mediaService.assertMediaReady(finalizeResult);
 
-      // 5. Kirim voice message; auth otomatis via HttpTransport. Backend
-      // meneruskan media_id + storage_key ke Langflow untuk STT + TTS.
-      const result = await getServices().practiceService.sendVoiceMessage({
-        sessionId,
-        mediaId: finalizeResult.mediaId,
-        text: null, // biarkan Langflow melakukan STT
-        clientMessageId: `voice-${Date.now()}`,
-      });
+      // HIT 2: Transcribe audio (STT) untuk mendapatkan text pesan.
+      const transcriptText = await getServices().mediaService.transcribe(finalizeResult.mediaId);
 
-      // Hapus optimistic bubble; versi server (dengan transkrip STT)
-      // akan masuk lewat refetch di bawah.
-      queryClient.setQueryData<ConversationMessage[]>(
-        ['practice', 'messages', sessionId],
-        (old) => (old ?? []).filter((m) => m.messageId !== optimisticId),
+      // Tampilkan transcript pada bubble optimistic agar user langsung melihatnya.
+      queryClient.setQueryData<ConversationMessage[]>(['practice', 'messages', sessionId], old =>
+        (old ?? []).map(m => (m.messageId === optimisticId ? { ...m, text: transcriptText } : m))
       );
 
-      // AI reply langsung tampil (audio_url dari MinIO) tanpa menunggu refetch.
-      appendAiMessage(result.aiMessage);
-      // Reconcile dengan server di background.
+      // HIT 3: Kirim voice message dengan text + audio_duration_ms dari recorder.
+      const result = await sendVoiceStream({
+        mediaId: finalizeResult.mediaId,
+        text: transcriptText,
+        audioDurationMs: durationMs,
+        clientMessageId: newIdempotencyKey(),
+      });
+      if (result.aiMessage) markMessagesAsNew([result.aiMessage.messageId]);
       void messages.refetch();
     } catch (err) {
-      // Hapus optimistic bubble agar tidak menggantung saat gagal.
-      queryClient.setQueryData<ConversationMessage[]>(
-        ['practice', 'messages', sessionId],
-        (old) => (old ?? []).filter((m) => m.messageId !== optimisticId),
-      );
-      console.error('Failed to send voice:', err);
-      setSendError(
-        err instanceof Error ? err.message : 'Failed to send voice message',
-      );
-    } finally {
-      finishTurnStatus();
+      queryClient.setQueryData<ConversationMessage[]>(['practice', 'messages', sessionId], old => (old ?? []).filter(m => m.messageId !== optimisticId));
+      setSendError(err instanceof Error ? err.message : 'Failed to send voice message');
     }
   };
 
@@ -328,109 +207,95 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
       queryClient.invalidateQueries({ queryKey: ['practice'] });
       navigation.goBack();
     } catch (err) {
-      console.error('Failed to delete session:', err);
       setSendError('Failed to delete chat');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  /** New Chat: buat session baru (agent+kategori sama) dari dalam room. */
   const handleNewChat = async () => {
     if (isCreatingNewChat) return;
     setIsCreatingNewChat(true);
     setSendError(null);
-    setRequestDone(false);
-    setStatusVisible(true);
-    setActiveSteps(buildGreetingSteps(agentName));
     try {
-      const created = await getServices().practiceService.createSession({
-        agentCode,
-        categoryId,
-      });
-      if (created.firstMessage) {
-        queryClient.setQueryData<ConversationMessage[]>(
-          ['practice', 'messages', created.sessionId],
-          [created.firstMessage],
-        );
-        markMessagesAsNew([created.firstMessage.messageId]);
-      }
-      queryClient.invalidateQueries({ queryKey: ['practice', 'sessions'] });
-      setSessionId(created.sessionId);
-      navigation.setParams({
-        sessionId: created.sessionId,
-        agentCode,
-        categoryId,
-      });
+      const { sessionId: newSessionId, firstMessage } = await createSessionStream({ agentCode, categoryId });
+      if (firstMessage) markMessagesAsNew([firstMessage.messageId]);
+      setSessionId(newSessionId);
+      navigation.setParams({ sessionId: newSessionId, agentCode, categoryId });
     } catch (err) {
-      console.error('Failed to create new chat:', err);
       setSendError(userMessageForError(err).message);
-      setStatusVisible(false);
-      setActiveSteps(null);
     } finally {
       setIsCreatingNewChat(false);
-      setRequestDone(true);
     }
   };
 
-  const handleSelectHistorySession = useCallback(
-    (newSessionId: string, newAgentCode: AgentCode, newCategoryId: string) => {
-      setSessionId(newSessionId);
-      navigation.setParams({
-        sessionId: newSessionId,
-        agentCode: newAgentCode,
-        categoryId: newCategoryId,
-      });
-    },
-    [navigation],
-  );
+  const handleSelectHistorySession = useCallback((newSessionId: string, newAgentCode: AgentCode, newCategoryId: string) => {
+    setSessionId(newSessionId);
+    navigation.setParams({ sessionId: newSessionId, agentCode: newAgentCode, categoryId: newCategoryId });
+  }, [navigation]);
 
-  const merged: MergedMessage[] = mergeMessages(
-    messages.data ?? [],
-    pendingMessages,
-  );
-
-  const isClosed =
-    session.data?.state !== undefined && session.data.state !== 'active';
-
-  // Reset error saat session berganti.
+  // Reset state when session changes
   useEffect(() => {
     setSendError(null);
     setIsResuming(false);
-    // Session berganti: belum ada bubble yang dirender untuk session baru.
-    sessionWithRenderedBubblesRef.current = null;
+    hydratedMessageIdsRef.current = new Set();
+    setHydratedSessionKey(null);
+    setNewMessageIds(new Set());
+    autoplayedIdsRef.current = new Set();
+    pendingAutoplayRef.current = [];
+    audio.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  /**
-   * Setelah bubble dirender untuk session aktif, tandai SEMUA pesan yang
-   * saat ini ada di list sebagai "hydrated" (sudah ada sebelum dirender).
-   * Pesan AI yang masuk SETELAH ini (balasan baru saat user di room) tidak
-   * ikut tertandai, sehingga hanya mereka yang autoplay + typewriter.
-   */
-  useEffect(() => {
-    if (sessionId === null || messages.isLoading || isResuming) return;
-    sessionWithRenderedBubblesRef.current = sessionId;
+  // Hydrate existing messages (mark as "not new" so they don't autoplay)
+  const historyReady = sessionId !== null && messages.isSuccess && !isResuming;
+  if (historyReady && hydratedSessionKey !== sessionId) {
     const hydrated = hydratedMessageIdsRef.current;
-    for (const m of merged) {
-      hydrated.add(m.messageId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, messages.isLoading, isResuming, merged]);
+    for (const m of merged) hydrated.add(m.messageId);
+    setHydratedSessionKey(sessionId);
+  }
 
   const isAiAudio = (item: MergedMessage): boolean =>
-    !('pending' in item) &&
-    item.role === 'agent' &&
-    item.modality === 'audio' &&
-    typeof item.audioUrl === 'string' &&
-    item.audioUrl.length > 0;
+    !('pending' in item) && item.role === 'agent' && item.modality === 'audio' && typeof item.audioUrl === 'string' && item.audioUrl.length > 0;
+
+  // Antrekan autoplay untuk pesan audio baru (dipicu saat markMessagesAsNew).
+  useEffect(() => {
+    if (newMessageIds.size === 0) return;
+    for (const id of newMessageIds) {
+      if (!autoplayedIdsRef.current.has(id) && !pendingAutoplayRef.current.includes(id)) {
+        pendingAutoplayRef.current.push(id);
+      }
+    }
+  }, [newMessageIds]);
+
+  // Eksekusi antrean autoplay setelah data pesan termuat. Idempotent: pesan
+  // yang sudah pernah diautoplay tidak akan diputar ulang meski rerender.
+  // Pesan yang bukan audio dibuang dari antrean agar tidak macet.
+  useEffect(() => {
+    const queue = pendingAutoplayRef.current;
+    if (queue.length === 0) return;
+    const nextId = queue[0];
+    const msg = merged.find((m) => m.messageId === nextId);
+    // Pesan belum termuat → tunggu refetch berikutnya.
+    if (!msg) return;
+    // Bukan audio AI → buang dari antrean, jangan diputar.
+    if (!isAiAudio(msg) || typeof msg.audioUrl !== 'string') {
+      autoplayedIdsRef.current.add(nextId);
+      queue.shift();
+      return;
+    }
+    // Tandai SEKARANG sebelum play agar rerender tidak memicu play ganda.
+    autoplayedIdsRef.current.add(nextId);
+    queue.shift();
+    console.log('[Audio] autoplay effect → start', JSON.stringify({ id: nextId }));
+    audio.start({ id: nextId, uri: msg.audioUrl });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merged, newMessageIds]);
+
+  const isStreaming = greetingStreamingState.status === 'streaming' || textStreamingState.status === 'streaming' || voiceStreamingState.status === 'streaming';
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.colors.background.main }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-    >
-      {/* Header with model info and menu */}
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.colors.background.main }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <ChatHeader
         agent={currentAgent}
         category={currentCategory}
@@ -440,100 +305,85 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
         onBack={() => navigation.goBack()}
       />
 
-      {/* Messages list */}
-      {sessionId !== null && (messages.isLoading || isResuming) ? (
-        <View className="flex-1 justify-center">
-          <LoadingSpinner message="Loading history..." />
-        </View>
+      {sessionId !== null && (messages.isLoading || isResuming || hydratedSessionKey !== sessionId) ? (
+        <View className="flex-1 justify-center"><LoadingSpinner message="Loading history..." /></View>
       ) : messages.isError ? (
         <View className="flex-1">
-          <ErrorState
-            message={userMessageForError(messages.error).message}
-            requestId={userMessageForError(messages.error).requestId}
-            onRetry={() => messages.refetch()}
-          />
+          <ErrorState message={userMessageForError(messages.error).message} requestId={userMessageForError(messages.error).requestId} onRetry={() => messages.refetch()} />
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           key={sessionId ?? 'new'}
           data={merged}
-          keyExtractor={(item) => item.messageId}
+          keyExtractor={item => item.messageId}
           contentContainerClassName="p-3 flex-grow"
-          renderItem={({ item }) =>
-            isAiAudio(item) ? (
-              <AgentAudioBubble
-                audioUrl={item.audioUrl as string}
-                text={item.text ?? ''}
-                audioDurationMs={item.audioDurationMs}
-                // Hanya balasan AI BARU (belum pernah dirender sebelumnya)
-                // yang autoplay + typewriter. Riwayat render instan & sunyi.
-                autoPlay={
-                  !isResuming && !hydratedMessageIdsRef.current.has(item.messageId)
-                }
-              />
-            ) : (
+          onContentSizeChange={() => {
+            // Auto-scroll when content size changes (new messages)
+            if (hydratedSessionKey === sessionId) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          renderItem={({ item }) => {
+            const isActive = audio.activeId === item.messageId;
+            // Progress hanya relevan untuk item yang sedang aktif
+            const progress = isActive && audio.duration > 0 ? audio.currentTime / audio.duration : 0;
+            if (isAiAudio(item)) {
+              return (
+                <AgentAudioBubble
+                  audioUrl={item.audioUrl as string}
+                  text={item.text ?? ''}
+                  audioDurationMs={item.audioDurationMs}
+                  animateText={newMessageIds.has(item.messageId)}
+                  playing={isActive && audio.playing}
+                  progress={progress}
+                  onToggle={() =>
+                    audio.toggle({ id: item.messageId, uri: item.audioUrl as string })
+                  }
+                />
+              );
+            }
+            // Voice note dari user: uri lokal (optimistic) atau server.
+            const voiceUri =
+              'localAudioUri' in item && item.localAudioUri
+                ? item.localAudioUri
+                : item.role === 'user' && item.modality === 'audio'
+                  ? (item.audioUrl ?? null)
+                  : null;
+            return (
               <MessageBubble
                 message={item}
-                onRetry={
-                  'pending' in item && item.failed
-                    ? () => retry((item as PendingMessage).messageId)
+                voicePlaying={voiceUri !== null && isActive && audio.playing}
+                voiceProgress={voiceUri !== null ? progress : 0}
+                onVoiceToggle={
+                  voiceUri !== null
+                    ? () => audio.toggle({ id: item.messageId, uri: voiceUri })
                     : undefined
                 }
+                onRetry={'pending' in item && item.failed ? () => retry((item as PendingMessage).messageId) : undefined}
               />
-            )
-          }
-          ListEmptyComponent={
-            statusVisible ? null : (
-              <EmptyState
-                title="Start a conversation"
-                message="Hold the microphone button to record a voice message, or tap the chat icon to type."
-                icon="chatbubble-ellipses-outline"
-              />
-            )
-          }
+            );
+          }}
+          ListEmptyComponent={isStreaming ? null : <EmptyState title="Start a conversation" message="Hold the microphone button to record a voice message, or tap the chat icon to type." icon="chatbubble-ellipses-outline" />}
         />
       )}
 
-      {/* Status "AI berpikir" */}
-      {statusVisible && activeSteps ? (
-        <LoadingStatus
-          steps={activeSteps}
-          done={requestDone}
-          onFinished={() => {
-            setStatusVisible(false);
-            setActiveSteps(null);
-          }}
-        />
-      ) : null}
-
-      {/* Error banner */}
       {sendError ? (
         <View className="flex-row items-center gap-2 bg-[#f5e0dc] p-2 mx-3 rounded-md mb-1">
-          <Text variant="caption" className="text-danger flex-1">
-            {sendError}
-          </Text>
+          <Text variant="caption" className="text-danger flex-1">{sendError}</Text>
         </View>
       ) : null}
 
-      {/* Voice-first composer - always at bottom */}
       <View className="mt-auto">
         <VoiceComposer
           onSendText={handleSendText}
           onSendVoice={handleSendVoice}
-          disabled={
-            sessionId === null || isClosed || isDeleting || isCreatingNewChat
-          }
+          onStartRecording={audio.stop}
+          disabled={sessionId === null || session.data?.state !== 'active' || isDeleting || isCreatingNewChat || isStreaming}
         />
       </View>
 
-      {/* History bottom sheet */}
-      <HistoryBottomSheet
-        visible={historyVisible}
-        onClose={() => setHistoryVisible(false)}
-        onSelectSession={handleSelectHistorySession}
-        currentAgentCode={agentCode}
-        currentCategoryId={categoryId}
-      />
+      <HistoryBottomSheet visible={historyVisible} onClose={() => setHistoryVisible(false)} onSelectSession={handleSelectHistorySession} currentAgentCode={agentCode} currentCategoryId={categoryId} />
     </KeyboardAvoidingView>
   );
 };

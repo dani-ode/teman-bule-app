@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IPracticeService } from '@/domain/practice/IPracticeService';
+import { IPracticeService, PracticeStreamCallbacks } from '@/domain/practice/IPracticeService';
 import {
   AgentCode,
   AgentPersona,
@@ -11,6 +11,8 @@ import {
   PracticeSessionListItem,
 } from '@/domain/practice/practice.types';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
+import { AccessTokenStore } from '@/core/auth/AccessTokenStore';
+import { createSseStream, SseStreamHandle } from '@/core/network/sseClient';
 import {
   agentPersonaResponseSchema,
   chatTurnMessagesSchema,
@@ -33,7 +35,10 @@ type ChatTurnResultData = z.infer<typeof chatTurnResultSchema>;
 const LANGFLOW_TIMEOUT_MS = 120_000;
 
 export class ApiPracticeService implements IPracticeService {
-  constructor(private readonly http: HttpTransport) {}
+  constructor(
+    private readonly http: HttpTransport,
+    private readonly tokenStore: AccessTokenStore,
+  ) {}
 
   private mapSession(data: {
     session_id: string;
@@ -103,6 +108,47 @@ export class ApiPracticeService implements IPracticeService {
       categoryId: data.category_id,
       firstMessage: data.first_message ? this.mapMessage(data.first_message) : null,
     };
+  }
+
+  public createSessionStream(
+    input: {
+      agentCode: AgentCode;
+      categoryId: string;
+    },
+    callbacks: PracticeStreamCallbacks,
+  ): SseStreamHandle {
+    const accessToken = this.tokenStore.get();
+    if (!accessToken) {
+      throw new Error('No access token available for SSE stream');
+    }
+
+    console.log('[ApiPracticeService] Creating session stream:', {
+      path: '/practice/sessions:stream',
+      agentCode: input.agentCode,
+      categoryId: input.categoryId,
+      hasToken: !!accessToken,
+    });
+
+    const stream = createSseStream({
+      path: '/practice/sessions:stream',
+      method: 'POST',
+      body: {
+        agent_code: input.agentCode,
+        category_id: input.categoryId,
+      },
+      accessToken,
+    });
+
+    // Register callbacks with correct event names
+    if (callbacks.onStarted) stream.on('onStarted', callbacks.onStarted);
+    if (callbacks.onTextDelta) stream.on('onTextDelta', callbacks.onTextDelta);
+    if (callbacks.onUsageUpdated) stream.on('onUsageUpdated', callbacks.onUsageUpdated);
+    if (callbacks.onCompleted) stream.on('onCompleted', callbacks.onCompleted);
+    if (callbacks.onFailed) stream.on('onFailed', callbacks.onFailed);
+    if (callbacks.onError) stream.on('onError', callbacks.onError);
+
+    console.log('[ApiPracticeService] Callbacks registered, starting stream');
+    return stream.start();
   }
 
   public async getSession(sessionId: string): Promise<PracticeSession> {
@@ -197,6 +243,46 @@ export class ApiPracticeService implements IPracticeService {
     };
   }
 
+  public sendMessageStream(
+    input: {
+      sessionId: string;
+      text: string;
+      clientMessageId: string;
+    },
+    callbacks: PracticeStreamCallbacks,
+  ): SseStreamHandle {
+    const accessToken = this.tokenStore.get();
+    if (!accessToken) {
+      throw new Error('No access token available for SSE stream');
+    }
+
+    console.log('[ApiPracticeService] Creating message stream:', {
+      path: `/practice/sessions/${input.sessionId}/messages:stream`,
+      sessionId: input.sessionId,
+      clientMessageId: input.clientMessageId,
+      textLength: input.text.length,
+    });
+
+    const stream = createSseStream({
+      path: `/practice/sessions/${input.sessionId}/messages:stream`,
+      method: 'POST',
+      body: {
+        text: input.text,
+        client_message_id: input.clientMessageId,
+      },
+      accessToken,
+    });
+
+    if (callbacks.onStarted) stream.on('onStarted', callbacks.onStarted);
+    if (callbacks.onTextDelta) stream.on('onTextDelta', callbacks.onTextDelta);
+    if (callbacks.onUsageUpdated) stream.on('onUsageUpdated', callbacks.onUsageUpdated);
+    if (callbacks.onCompleted) stream.on('onCompleted', callbacks.onCompleted);
+    if (callbacks.onFailed) stream.on('onFailed', callbacks.onFailed);
+    if (callbacks.onError) stream.on('onError', callbacks.onError);
+
+    return stream.start();
+  }
+
   /**
    * Map ChatResult wire (Langflow via backend ChatService) ke domain
    * ChatTurnResult. Audio TTS dikirim top-level (audio_url,
@@ -241,6 +327,7 @@ export class ApiPracticeService implements IPracticeService {
     sessionId: string;
     mediaId: string;
     text?: string | null;
+    audioDurationMs?: number | null;
     clientMessageId: string;
   }): Promise<ChatTurnResult> {
     const data = decode(
@@ -251,12 +338,60 @@ export class ApiPracticeService implements IPracticeService {
         body: {
           media_id: input.mediaId,
           text: input.text ?? null,
+          audio_duration_ms: input.audioDurationMs ?? null,
           client_message_id: input.clientMessageId,
         },
         timeoutMs: LANGFLOW_TIMEOUT_MS,
       }),
     );
     return this.mapChatTurnResult(data);
+  }
+
+  public sendVoiceMessageStream(
+    input: {
+      sessionId: string;
+      mediaId: string;
+      text?: string | null;
+      audioDurationMs?: number | null;
+      clientMessageId: string;
+    },
+    callbacks: PracticeStreamCallbacks,
+  ): SseStreamHandle {
+    const accessToken = this.tokenStore.get();
+    if (!accessToken) {
+      throw new Error('No access token available for SSE stream');
+    }
+
+    console.log('[ApiPracticeService] Creating voice message stream:', {
+      path: `/practice/sessions/${input.sessionId}/voice-messages:stream`,
+      sessionId: input.sessionId,
+      mediaId: input.mediaId,
+      clientMessageId: input.clientMessageId,
+      hasText: typeof input.text === 'string' && input.text.length > 0,
+      audioDurationMs: input.audioDurationMs ?? null,
+    });
+
+    const stream = createSseStream({
+      path: `/practice/sessions/${input.sessionId}/voice-messages:stream`,
+      method: 'POST',
+      body: {
+        media_id: input.mediaId,
+        text: input.text ?? null,
+        audio_duration_ms: input.audioDurationMs ?? null,
+        client_message_id: input.clientMessageId,
+      },
+      accessToken,
+    });
+
+    if (callbacks.onStarted) stream.on('onStarted', callbacks.onStarted);
+    if (callbacks.onTranscript) stream.on('onTranscript', callbacks.onTranscript);
+    if (callbacks.onTextDelta) stream.on('onTextDelta', callbacks.onTextDelta);
+    if (callbacks.onUsageUpdated) stream.on('onUsageUpdated', callbacks.onUsageUpdated);
+    if (callbacks.onCompleted) stream.on('onCompleted', callbacks.onCompleted);
+    if (callbacks.onFailed) stream.on('onFailed', callbacks.onFailed);
+    if (callbacks.onError) stream.on('onError', callbacks.onError);
+
+    return stream.start();
   }
 
   public async listMessages(sessionId: string, limit = 50): Promise<ConversationMessage[]> {

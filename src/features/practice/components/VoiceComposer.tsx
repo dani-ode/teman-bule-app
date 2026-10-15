@@ -12,10 +12,15 @@ import {
 } from 'expo-audio';
 import { theme } from '@/ui/theme';
 import { Text } from '@/ui/components/Text';
+import { AudioWaveformPlayer } from '@/ui/components/AudioWaveformPlayer';
+
+const TAG = '[Audio]';
 
 export interface VoiceComposerProps {
   readonly onSendText: (text: string) => void;
   readonly onSendVoice: (uri: string, durationMs: number) => void;
+  /** Dipanggil saat mulai merekam agar screen bisa menghentikan audio chat. */
+  readonly onStartRecording?: () => void;
   readonly disabled?: boolean;
 }
 
@@ -29,6 +34,7 @@ const MIN_DURATION_MS = 600;
 export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   onSendText,
   onSendVoice,
+  onStartRecording,
   disabled = false,
 }) => {
   const [mode, setMode] = useState<'voice' | 'text'>('voice');
@@ -43,18 +49,27 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   });
   const recorderState = useAudioRecorderState(recorder, 100);
 
-  // Player untuk memutar ulang rekaman sebelum dikirim
+  // Player untuk memutar ulang rekaman sebelum dikirim. Source berubah sesuai
+  // recordedUri; useAudioPlayer menangani release/recreate secara internal.
   const previewPlayer = useAudioPlayer(recordedUri);
   const previewStatus = useAudioPlayerStatus(previewPlayer);
 
-  // Kembali ke awal saat playback selesai
+  // Saat preview selesai: pause agar playWhenReady native turun. JANGAN
+  // seekTo(0) di sini — di ExoPlayer seek saat ENDED tetap playWhenReady=true
+  // → auto-replay (loop). Posisi di-reset saat user menekan play lagi.
   useEffect(() => {
     if (previewStatus.didJustFinish) {
-      void previewPlayer.seekTo(0);
+      try {
+        previewPlayer.pause();
+      } catch (e) {
+        console.log(`${TAG} preview pause after finish failed`, String(e));
+      }
     }
   }, [previewStatus.didJustFinish, previewPlayer]);
 
   const isPreviewPlaying = previewStatus.playing;
+  // Progress preview 0..1 untuk waveform fill
+  const previewProgress = previewStatus.duration > 0 ? previewStatus.currentTime / previewStatus.duration : 0;
 
   // Animation values untuk sound bars
   const barAnimations = useRef(
@@ -100,6 +115,19 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       return;
     }
 
+    // Hentikan audio chat yang sedang diputar agar tidak ikut terekam.
+    console.log(`${TAG} startRecording → stop conversation audio`);
+    onStartRecording?.();
+
+    // Hentikan preview rekaman lama bila masih berbunyi.
+    try {
+      if (previewStatus.playing) {
+        previewPlayer.pause();
+      }
+    } catch (e) {
+      console.log(`${TAG} pause preview before record failed`, String(e));
+    }
+
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
 
     try {
@@ -111,7 +139,7 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       console.error('Failed to start recording:', err);
       await setAudioModeAsync({ allowsRecording: false });
     }
-  }, [recorder, disabled]);
+  }, [recorder, disabled, onStartRecording, previewPlayer, previewStatus.playing]);
 
   const stopRecording = useCallback(async () => {
     if (!recorderState.isRecording) return;
@@ -149,11 +177,19 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
 
   const handleSendVoice = useCallback(() => {
     if (recordedUri && recordingDuration > 0) {
+      // Stop preview agar tidak lanjut berbunyi setelah rekaman dikirim.
+      try {
+        if (previewStatus.playing) {
+          previewPlayer.pause();
+        }
+      } catch (e) {
+        console.log(`${TAG} pause preview on send failed`, String(e));
+      }
       onSendVoice(recordedUri, recordingDuration);
       setRecordedUri(null);
       setRecordingDuration(0);
     }
-  }, [recordedUri, recordingDuration, onSendVoice]);
+  }, [recordedUri, recordingDuration, onSendVoice, previewPlayer, previewStatus.playing]);
   const handleSendText = useCallback(() => {
     const trimmed = textInput.trim();
     if (trimmed.length > 0 && !disabled) {
@@ -174,12 +210,26 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   const handleTogglePreview = useCallback(() => {
     if (!recordedUri) return;
 
-    if (previewStatus.playing) {
-      previewPlayer.pause();
-    } else {
-      previewPlayer.play();
+    try {
+      if (previewStatus.playing) {
+        console.log(`${TAG} preview pause`);
+        previewPlayer.pause();
+      } else {
+        console.log(`${TAG} preview play`, JSON.stringify({ uri: recordedUri.slice(-24) }));
+        // Hentikan audio chat agar tidak bertumpuk dengan preview.
+        onStartRecording?.();
+        // Bila sudah di akhir, mundur ke awal sebelum play agar replay dari 0.
+        const dur = previewPlayer.duration;
+        const cur = previewPlayer.currentTime;
+        if (dur > 0 && cur >= dur - 0.1) {
+          void previewPlayer.seekTo(0);
+        }
+        previewPlayer.play();
+      }
+    } catch (e) {
+      console.log(`${TAG} preview toggle failed`, String(e));
     }
-  }, [recordedUri, previewPlayer, previewStatus.playing]);
+  }, [recordedUri, previewPlayer, previewStatus.playing, onStartRecording]);
 
   const toggleMode = useCallback(() => {
     setMode((prev) => (prev === 'voice' ? 'text' : 'voice'));
@@ -235,34 +285,21 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
       {/* Voice preview setelah recording */}
       {hasVoiceRecorded && !isRecording && (
         <View className="flex-row items-center bg-khaki-100 rounded-lg px-3 py-2 mb-2">
-          <Pressable
-            onPress={handleTogglePreview}
-            hitSlop={8}
-            accessibilityLabel={
-              isPreviewPlaying ? 'Stop voice preview' : 'Play voice preview'
-            }
-            className="p-1"
-          >
-            <Ionicons
-              name={isPreviewPlaying ? 'pause' : 'play'}
-              size={22}
-              color={theme.colors.primary[600]}
+          <View className="flex-1">
+            <AudioWaveformPlayer
+              uri={recordedUri}
+              durationMs={recordingDuration}
+              playing={isPreviewPlaying}
+              progress={previewProgress}
+              onToggle={handleTogglePreview}
+              variant="ai"
             />
-          </Pressable>
-          <Ionicons
-            name="mic"
-            size={20}
-            color={theme.colors.primary[600]}
-            style={{ marginLeft: theme.spacing.xs }}
-          />
-          <Text variant="body" className="flex-1 ml-2">
-            Voice message ({formatDuration(recordingDuration)})
-          </Text>
+          </View>
           <Pressable
             onPress={handleDeleteVoice}
             hitSlop={8}
             accessibilityLabel="Delete voice message"
-            className="p-1"
+            className="p-1 ml-2"
           >
             <Ionicons name="trash-outline" size={20} color={theme.colors.semantic.error} />
           </Pressable>

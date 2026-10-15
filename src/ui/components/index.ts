@@ -13,4 +13,6 @@ export type { LoadingSpinnerProps } from './LoadingSpinner';
 export { ErrorState, EmptyState, UnavailableState } from './States';
 export type { ErrorStateProps, EmptyStateProps, UnavailableStateProps } from './States';
 export { ErrorBoundary } from './ErrorBoundary';
+export { AudioWaveformPlayer } from './AudioWaveformPlayer';
+export type { AudioWaveformPlayerProps } from './AudioWaveformPlayer';
 export { ScreenRefreshControl } from './ScreenRefreshControl';

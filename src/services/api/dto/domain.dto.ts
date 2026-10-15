@@ -291,6 +291,15 @@ export const downloadUrlResponseSchema = z.object({
 });
 export type DownloadUrlResponse = z.infer<typeof downloadUrlResponseSchema>;
 
+/**
+ * Hasil transcribe audio (STT) dari POST /media/{media_id}:transcribe.
+ * Dipakai pada flow voice message 3-hit: upload → transcribe → send message.
+ */
+export const transcribeResponseSchema = z.object({
+  text: z.string(),
+});
+export type TranscribeResponse = z.infer<typeof transcribeResponseSchema>;
+
 // --- account deletion ---
 export const deletionResponseSchema = z.object({
   deletion_request_id: z.string(),

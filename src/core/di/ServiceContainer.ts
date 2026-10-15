@@ -76,7 +76,7 @@ const buildApiServices = (): AppServices => {
     session: sessionRef,
     authService,
     accountService: new ApiAccountService(transport),
-    practiceService: new ApiPracticeService(transport),
+    practiceService: new ApiPracticeService(transport, tokenStore),
     mediaService: new ApiMediaService(transport),
     vocabularyService: new ApiVocabularyService(transport),
     learningService: new ApiLearningService(transport),

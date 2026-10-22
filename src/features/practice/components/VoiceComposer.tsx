@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Pressable, TextInput, Animated, Easing } from 'react-native';
+import { View, Pressable, TextInput, Animated, Easing, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  requestNotificationPermissionsAsync,
   requestRecordingPermissionsAsync,
   RecordingPresets,
   setAudioModeAsync,
@@ -14,7 +15,15 @@ import { theme } from '@/ui/theme';
 import { Text } from '@/ui/components/Text';
 import { AudioWaveformPlayer } from '@/ui/components/AudioWaveformPlayer';
 
-const TAG = '[Audio]';
+const TAG = '[VoiceComposer]';
+
+function log(event: string, detail?: Record<string, unknown>): void {
+  if (detail) {
+    console.log(`${TAG} ${event}`, JSON.stringify(detail));
+  } else {
+    console.log(`${TAG} ${event}`);
+  }
+}
 
 export interface VoiceComposerProps {
   readonly onSendText: (text: string) => void;
@@ -22,6 +31,12 @@ export interface VoiceComposerProps {
   /** Dipanggil saat mulai merekam agar screen bisa menghentikan audio chat. */
   readonly onStartRecording?: () => void;
   readonly disabled?: boolean;
+  /** Toggle buka/tutup section reply suggestions di atas composer. */
+  readonly onToggleSuggestions?: () => void;
+  /** Highlight tombol suggestions saat section sedang terbuka. */
+  readonly suggestionsActive?: boolean;
+  /** Disable tombol suggestions (mis. saat request sedang berjalan). */
+  readonly suggestionsDisabled?: boolean;
 }
 
 const BAR_COUNT = 5;
@@ -36,18 +51,53 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   onSendVoice,
   onStartRecording,
   disabled = false,
+  onToggleSuggestions,
+  suggestionsActive = false,
+  suggestionsDisabled = false,
 }) => {
   const [mode, setMode] = useState<'voice' | 'text'>('voice');
   const [textInput, setTextInput] = useState('');
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
-  // Audio recorder dengan metering enabled
+  // Audio recorder dengan metering enabled.
+  // HAPUS audioSource eksplisit — 'voice_communication' bisa menyebabkan
+  // mic diputus oleh echo cancellation Android setelah beberapa detik.
+  // Gunakan default (mic) yang lebih stabil.
   const recorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
     isMeteringEnabled: true,
   });
   const recorderState = useAudioRecorderState(recorder, 100);
+
+  // Track perubahan recorder state untuk debug
+  const prevRecorderStateRef = useRef(recorderState);
+  useEffect(() => {
+    const prev = prevRecorderStateRef.current;
+    if (prev.isRecording !== recorderState.isRecording) {
+      log('recorderState.isRecording changed', {
+        from: prev.isRecording,
+        to: recorderState.isRecording,
+        durationMillis: recorderState.durationMillis,
+        metering: recorderState.metering,
+      });
+    }
+    if (prev.durationMillis !== recorderState.durationMillis && recorderState.isRecording) {
+      // Log setiap 1 detik untuk melacak metering
+      if (Math.floor(recorderState.durationMillis / 1000) !== Math.floor(prev.durationMillis / 1000)) {
+        const metering = recorderState.metering;
+        const isSilent = metering === -160;
+        log('recording tick', {
+          durationSec: Math.floor(recorderState.durationMillis / 1000),
+          metering,
+          isSilent,
+          // Warning jika metering turun drastis (indikasi mic terputus)
+          ...(isSilent && prev.metering !== -160 && { warning: 'METERING_DROP' }),
+        });
+      }
+    }
+    prevRecorderStateRef.current = recorderState;
+  }, [recorderState]);
 
   // Player untuk memutar ulang rekaman sebelum dikirim. Source berubah sesuai
   // recordedUri; useAudioPlayer menangani release/recreate secara internal.
@@ -59,13 +109,24 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   // → auto-replay (loop). Posisi di-reset saat user menekan play lagi.
   useEffect(() => {
     if (previewStatus.didJustFinish) {
+      log('preview didJustFinish → pause');
       try {
         previewPlayer.pause();
       } catch (e) {
-        console.log(`${TAG} preview pause after finish failed`, String(e));
+        log('preview pause after finish failed', { error: String(e) });
       }
     }
   }, [previewStatus.didJustFinish, previewPlayer]);
+
+  // Monitor preview player status saat recording untuk deteksi interference
+  useEffect(() => {
+    if (recorderState.isRecording && previewStatus.playing) {
+      log('WARNING: preview playing during recording!', {
+        previewPlaying: previewStatus.playing,
+        previewCurrentTime: previewStatus.currentTime,
+      });
+    }
+  }, [recorderState.isRecording, previewStatus.playing, previewStatus.currentTime]);
 
   const isPreviewPlaying = previewStatus.playing;
   // Progress preview 0..1 untuk waveform fill
@@ -107,59 +168,129 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   }, [recorderState.isRecording, recorderState.metering, barAnimations]);
 
   const startRecording = useCallback(async () => {
+    log('startRecording called', { disabled });
     if (disabled) return;
 
+    log('requesting permission...');
     const perm = await requestRecordingPermissionsAsync();
+    log('permission result', { granted: perm.granted });
     if (!perm.granted) {
       console.warn('Recording permission denied');
       return;
     }
 
+    // allowsBackgroundRecording menjalankan foreground service yang wajib punya
+    // izin POST_NOTIFICATIONS di Android 13+. Tanpa izin ini prepareToRecordAsync
+    // akan reject. Minta izinnya lebih dulu; jika ditolak, lanjutkan recording
+    // tanpa foreground service.
+    let allowsBackgroundRecording = false;
+    if (Platform.OS === 'android') {
+      const notifPerm = await requestNotificationPermissionsAsync();
+      allowsBackgroundRecording = notifPerm.granted;
+      log('notification permission result', {
+        granted: notifPerm.granted,
+        allowsBackgroundRecording,
+      });
+    }
+
     // Hentikan audio chat yang sedang diputar agar tidak ikut terekam.
-    console.log(`${TAG} startRecording → stop conversation audio`);
+    log('stopping conversation audio via onStartRecording');
     onStartRecording?.();
 
     // Hentikan preview rekaman lama bila masih berbunyi.
+    log('preview status before record', {
+      playing: previewStatus.playing,
+      didJustFinish: previewStatus.didJustFinish,
+    });
     try {
       if (previewStatus.playing) {
         previewPlayer.pause();
+        log('preview paused before record');
       }
     } catch (e) {
-      console.log(`${TAG} pause preview before record failed`, String(e));
+      log('pause preview before record failed', { error: String(e) });
     }
 
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    // Konfigurasi audio mode untuk recording.
+    // PENTING: Gunakan 'mixWithOthers' agar recorder tidak request audio focus.
+    // 'doNotMix' memicu requestAudioFocus() yang bisa menyebabkan mic terputus
+    // saat ada audio focus change (notifikasi, sistem suara, dll).
+    //
+    // allowsBackgroundRecording: true memakai foreground service agar sistem
+    // tidak memutus mic saat recording berlangsung. Hanya aktifkan bila izin
+    // POST_NOTIFICATIONS sudah diberikan (Android 13+).
+    log('setting audio mode for recording', {
+      platform: Platform.OS,
+      allowsRecording: true,
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      allowsBackgroundRecording,
+    });
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      // Foreground service menjaga mic tetap aktif
+      allowsBackgroundRecording,
+    });
+    log('audio mode set');
 
     try {
+      log('prepareToRecordAsync...');
       await recorder.prepareToRecordAsync();
+      log('prepareToRecordAsync done, calling record()...');
       recorder.record();
+      log('record() called', {
+        isRecording: recorderState.isRecording,
+        uri: recorder.uri,
+      });
       setRecordedUri(null);
       setRecordingDuration(0);
     } catch (err) {
+      log('start recording failed', { error: String(err) });
       console.error('Failed to start recording:', err);
       await setAudioModeAsync({ allowsRecording: false });
     }
-  }, [recorder, disabled, onStartRecording, previewPlayer, previewStatus.playing]);
+  }, [recorder, disabled, onStartRecording, previewPlayer, previewStatus.playing, recorderState.isRecording]);
 
   const stopRecording = useCallback(async () => {
-    if (!recorderState.isRecording) return;
+    log('stopRecording called', {
+      isRecording: recorderState.isRecording,
+      durationMillis: recorderState.durationMillis,
+    });
+    if (!recorderState.isRecording) {
+      log('stopRecording early return: not recording');
+      return;
+    }
 
     try {
+      log('recorder.stop()...');
       await recorder.stop();
-      await setAudioModeAsync({ allowsRecording: false });
+      log('recorder.stop() done', { uri: recorder.uri });
+
+      log('setting audio mode back to non-recording');
+      await setAudioModeAsync({
+        allowsRecording: false,
+        interruptionMode: 'mixWithOthers',
+        allowsBackgroundRecording: false,
+      });
+      log('audio mode reset');
 
       const uri = recorder.uri;
       const duration = recorderState.durationMillis ?? 0;
+      log('stop result', { uri, duration, minDuration: MIN_DURATION_MS });
 
       if (uri && duration >= MIN_DURATION_MS) {
+        log('recording accepted', { duration });
         setRecordedUri(uri);
         setRecordingDuration(duration);
       } else {
-        // Recording terlalu pendek, discard
+        log('recording too short, discarded', { duration, minDuration: MIN_DURATION_MS });
         setRecordedUri(null);
         setRecordingDuration(0);
       }
     } catch (err) {
+      log('stop recording failed', { error: String(err) });
       console.error('Failed to stop recording:', err);
     }
   }, [recorder, recorderState.isRecording, recorderState.durationMillis]);
@@ -167,23 +298,33 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   // Tap-to-start / tap-to-stop (lebih andal daripada hold-to-record,
   // karena onPressOut sering tidak terkirim di emulator/perangkat).
   const toggleRecording = useCallback(() => {
+    log('toggleRecording called', {
+      disabled,
+      isRecording: recorderState.isRecording,
+      hasVoiceRecorded: recordedUri !== null,
+    });
     if (disabled) return;
     if (recorderState.isRecording) {
       void stopRecording();
     } else {
       void startRecording();
     }
-  }, [disabled, recorderState.isRecording, startRecording, stopRecording]);
+  }, [disabled, recorderState.isRecording, startRecording, stopRecording, recordedUri]);
 
   const handleSendVoice = useCallback(() => {
+    log('handleSendVoice called', {
+      hasRecordedUri: recordedUri !== null,
+      recordingDuration,
+    });
     if (recordedUri && recordingDuration > 0) {
       // Stop preview agar tidak lanjut berbunyi setelah rekaman dikirim.
       try {
         if (previewStatus.playing) {
           previewPlayer.pause();
+          log('preview paused on send');
         }
       } catch (e) {
-        console.log(`${TAG} pause preview on send failed`, String(e));
+        log('pause preview on send failed', { error: String(e) });
       }
       onSendVoice(recordedUri, recordingDuration);
       setRecordedUri(null);
@@ -199,8 +340,10 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   }, [textInput, disabled, onSendText]);
 
   const handleDeleteVoice = useCallback(() => {
+    log('handleDeleteVoice called');
     if (previewStatus.playing) {
       previewPlayer.pause();
+      log('preview paused on delete');
     }
     void previewPlayer.seekTo(0);
     setRecordedUri(null);
@@ -208,14 +351,20 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
   }, [previewPlayer, previewStatus.playing]);
 
   const handleTogglePreview = useCallback(() => {
+    log('handleTogglePreview called', {
+      hasRecordedUri: recordedUri !== null,
+      playing: previewStatus.playing,
+      currentTime: previewStatus.currentTime,
+      duration: previewStatus.duration,
+    });
     if (!recordedUri) return;
 
     try {
       if (previewStatus.playing) {
-        console.log(`${TAG} preview pause`);
+        log('preview pause');
         previewPlayer.pause();
       } else {
-        console.log(`${TAG} preview play`, JSON.stringify({ uri: recordedUri.slice(-24) }));
+        log('preview play', { uri: recordedUri.slice(-24) });
         // Hentikan audio chat agar tidak bertumpuk dengan preview.
         onStartRecording?.();
         // Bila sudah di akhir, mundur ke awal sebelum play agar replay dari 0.
@@ -227,21 +376,23 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
         previewPlayer.play();
       }
     } catch (e) {
-      console.log(`${TAG} preview toggle failed`, String(e));
+      log('preview toggle failed', { error: String(e) });
     }
-  }, [recordedUri, previewPlayer, previewStatus.playing, onStartRecording]);
+  }, [recordedUri, previewPlayer, previewStatus.playing, previewStatus.currentTime, previewStatus.duration, onStartRecording]);
 
   const toggleMode = useCallback(() => {
+    log('toggleMode called', { currentMode: mode });
     setMode((prev) => (prev === 'voice' ? 'text' : 'voice'));
     // Clear states saat switch
     if (previewStatus.playing) {
       previewPlayer.pause();
+      log('preview paused on mode toggle');
     }
     void previewPlayer.seekTo(0);
     setTextInput('');
     setRecordedUri(null);
     setRecordingDuration(0);
-  }, [previewPlayer, previewStatus.playing]);
+  }, [previewPlayer, previewStatus.playing, mode]);
 
   const isRecording = recorderState.isRecording;
   const hasVoiceRecorded = recordedUri !== null;
@@ -326,23 +477,46 @@ export const VoiceComposer: React.FC<VoiceComposerProps> = ({
 
       {/* Action buttons */}
       <View className="flex-row items-center justify-between">
-        {/* Left side: mode toggle */}
-        <Pressable
-          onPress={toggleMode}
-          disabled={disabled || isRecording}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'voice' ? 'Switch to text input' : 'Switch to voice input'}
-          className={[
-            'w-11 h-11 rounded-full items-center justify-center',
-            disabled || isRecording ? 'opacity-40' : 'active:opacity-80',
-          ].join(' ')}
-        >
-          <Ionicons
-            name={mode === 'voice' ? 'chatbox-outline' : 'mic-outline'}
-            size={22}
-            color={theme.colors.primary[600]}
-          />
-        </Pressable>
+        {/* Left side: mode toggle + suggestions toggle */}
+        <View className="flex-row items-center gap-1">
+          <Pressable
+            onPress={toggleMode}
+            disabled={disabled || isRecording}
+            accessibilityRole="button"
+            accessibilityLabel={mode === 'voice' ? 'Switch to text input' : 'Switch to voice input'}
+            className={[
+              'w-11 h-11 rounded-full items-center justify-center',
+              disabled || isRecording ? 'opacity-40' : 'active:opacity-80',
+            ].join(' ')}
+          >
+            <Ionicons
+              name={mode === 'voice' ? 'chatbox-outline' : 'mic-outline'}
+              size={22}
+              color={theme.colors.primary[600]}
+            />
+          </Pressable>
+
+          {onToggleSuggestions ? (
+            <Pressable
+              onPress={onToggleSuggestions}
+              disabled={disabled || suggestionsDisabled}
+              accessibilityRole="button"
+              accessibilityLabel={suggestionsActive ? 'Hide reply suggestions' : 'Show reply suggestions'}
+              accessibilityState={{ disabled: disabled || suggestionsDisabled, selected: suggestionsActive }}
+              className={[
+                'w-11 h-11 rounded-full items-center justify-center',
+                suggestionsActive ? 'bg-accent-100 border border-accent-300' : '',
+                disabled || suggestionsDisabled ? 'opacity-40' : 'active:opacity-80',
+              ].join(' ')}
+            >
+              <Ionicons
+                name={suggestionsActive ? 'bulb' : 'bulb-outline'}
+                size={22}
+                color={suggestionsActive ? theme.colors.accent[600] : theme.colors.primary[600]}
+              />
+            </Pressable>
+          ) : null}
+        </View>
 
         {/* Center: main action button */}
         {mode === 'voice' ? (

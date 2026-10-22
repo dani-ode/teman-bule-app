@@ -5,6 +5,7 @@ import {
   chatTurnMessagesSchema,
   chatTurnResultSchema,
   callResponseSchema,
+  suggestionsResponseSchema,
 } from '@/services/api/dto/domain.dto';
 import { walletResponseSchema } from '@/services/api/dto/account.dto';
 import { tokenPairResponseSchema } from '@/services/api/dto/auth.dto';
@@ -153,5 +154,27 @@ describe('wire DTO decoding', () => {
       end_reason: 'user_hangup',
     });
     expect(parsed.end_reason).toBe('user_hangup');
+  });
+
+  it('decodes reply suggestions (POST /practice/sessions/{id}/suggestions)', () => {
+    // Shape aktual dari endpoint suggestions: session_id + array 3 kalimat.
+    const parsed = suggestionsResponseSchema.parse({
+      session_id: '01M5EPZ32WHZQKMTXABS577AY5',
+      suggestions: [
+        "That sounds great, let's move forward with this plan right away.",
+        'Could you explain how this works and what the next steps are?',
+        'I would prefer to look at a few other options before deciding.',
+      ],
+    });
+    expect(parsed.suggestions).toHaveLength(3);
+    expect(parsed.suggestions[0]).toContain('move forward');
+  });
+
+  it('rejects suggestions with non-string items', () => {
+    const bad = {
+      session_id: 's1',
+      suggestions: ['valid', 42, 'also valid'],
+    };
+    expect(suggestionsResponseSchema.safeParse(bad).success).toBe(false);
   });
 });

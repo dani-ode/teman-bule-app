@@ -9,6 +9,7 @@ import {
   PracticeCategory,
   PracticeSession,
   PracticeSessionListItem,
+  ReplySuggestions,
 } from '@/domain/practice/practice.types';
 import { HttpTransport, decode } from '@/core/network/HttpTransport';
 import { AccessTokenStore } from '@/core/auth/AccessTokenStore';
@@ -22,6 +23,7 @@ import {
   practiceCategoryResponseSchema,
   sessionListItemResponseSchema,
   sessionResponseSchema,
+  suggestionsResponseSchema,
 } from './dto/domain.dto';
 
 /** Wire ChatResult hasil decode `chatTurnResultSchema` (bentuk snake_case). */
@@ -403,6 +405,27 @@ export class ApiPracticeService implements IPracticeService {
       }),
     );
     return data.map((m) => this.mapMessage(m));
+  }
+
+  /**
+   * Generate reply suggestions via workflow LLM (Langflow) — bisa berjalan
+   * puluhan detik secara sinkron, jadi pakai timeout panjang yang sama
+   * dengan endpoint chat lainnya.
+   */
+  public async getSuggestions(sessionId: string): Promise<ReplySuggestions> {
+    const data = decode(
+      suggestionsResponseSchema,
+      await this.http.request({
+        method: 'POST',
+        path: `/practice/sessions/${sessionId}/suggestions`,
+        body: {},
+        timeoutMs: LANGFLOW_TIMEOUT_MS,
+      }),
+    );
+    return {
+      sessionId: data.session_id,
+      suggestions: data.suggestions,
+    };
   }
 
   public async completeSession(sessionId: string): Promise<PracticeSession> {

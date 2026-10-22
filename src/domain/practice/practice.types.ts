@@ -79,6 +79,16 @@ export interface ConversationMessage {
 }
 
 /**
+ * Hasil reply suggestions untuk satu session. Opsi kalimat (biasanya 3) yang
+ * bisa dibaca user sebagai panduan saat merekam voice message — bukan untuk
+ * dikirim langsung sebagai bubble chat.
+ */
+export interface ReplySuggestions {
+  readonly sessionId: string;
+  readonly suggestions: ReadonlyArray<string>;
+}
+
+/**
  * Hasil satu chat turn (text/voice) yang diproses Langflow via backend.
  * audio membawa metadata TTS (mis. URL audio S3/MinIO) bila ada.
  */

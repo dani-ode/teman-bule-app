@@ -122,6 +122,16 @@ export const chatTurnMessagesSchema = z.object({
 });
 export type ChatTurnMessages = z.infer<typeof chatTurnMessagesSchema>;
 
+/**
+ * Hasil reply suggestions dari POST /practice/sessions/{id}/suggestions.
+ * Berisi 3 opsi kalimat yang bisa dibaca user saat merekam voice message.
+ */
+export const suggestionsResponseSchema = z.object({
+  session_id: z.string(),
+  suggestions: z.array(z.string()),
+});
+export type SuggestionsResponse = z.infer<typeof suggestionsResponseSchema>;
+
 // --- vocabulary ---
 export const vocabularyEntryResponseSchema = z.object({
   entry_id: z.string(),

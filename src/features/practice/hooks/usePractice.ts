@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getServices } from '@/core/di/ServiceContainer';
-import { AgentCode, ChatTurnResult, ConversationMessage } from '@/domain/practice/practice.types';
+import { AgentCode, ChatTurnResult, ConversationMessage, ReplySuggestions } from '@/domain/practice/practice.types';
 import { newIdempotencyKey } from '@/core/network/idempotency';
 import { dropPending, markPendingFailed } from './messageReducer';
 
@@ -64,6 +64,32 @@ export const useAgentPersonas = () =>
     queryFn: () => getServices().practiceService.listAgentPersonas(),
     staleTime: 5 * 60 * 1000,
   });
+
+/**
+ * Fetch reply suggestions (3 opsi kalimat) untuk session aktif. Dipicu manual
+ * oleh user lewat tombol di composer; hasilnya dipakai sebagai teks panduan
+ * yang dibaca saat merekam voice message (bukan bubble chat).
+ */
+export const usePracticeSuggestions = (sessionId: string | null) => {
+  const mutation = useMutation<ReplySuggestions, Error, void>({
+    mutationFn: () => {
+      if (!sessionId) throw new Error('No active session.');
+      return getServices().practiceService.getSuggestions(sessionId);
+    },
+  });
+
+  const fetchSuggestions = useCallback(() => {
+    if (sessionId) mutation.mutate();
+  }, [sessionId, mutation]);
+
+  return {
+    suggestions: mutation.data?.suggestions ?? [],
+    isLoading: mutation.isPending,
+    error: mutation.error,
+    fetchSuggestions,
+    reset: mutation.reset,
+  };
+};
 
 export const useCompletePracticeSession = () => {
   const qc = useQueryClient();

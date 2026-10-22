@@ -7,6 +7,7 @@ import {
   PracticeCategory,
   PracticeSession,
   PracticeSessionListItem,
+  ReplySuggestions,
 } from './practice.types';
 import {
   SseCompletedData,
@@ -67,6 +68,12 @@ export interface IPracticeService {
     callbacks: PracticeStreamCallbacks,
   ): SseStreamHandle;
   listMessages(sessionId: string, limit?: number): Promise<ConversationMessage[]>;
+  /**
+   * Reply suggestions untuk session: 3 opsi kalimat yang digenerate backend
+   * sebagai panduan dibaca user saat merekam voice message (bukan untuk
+   * dikirim langsung sebagai chat bubble).
+   */
+  getSuggestions(sessionId: string): Promise<ReplySuggestions>;
   /** Voice note: media audio sudah finalized; Langflow melakukan STT+TTS. */
   sendVoiceMessage(input: {
     sessionId: string;

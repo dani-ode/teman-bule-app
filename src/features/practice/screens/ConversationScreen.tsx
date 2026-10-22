@@ -8,6 +8,7 @@ import {
   usePracticeSession,
   useAgentPersonas,
   usePracticeCategories,
+  usePracticeSuggestions,
   PendingMessage,
 } from '../hooks/usePractice';
 import {
@@ -28,6 +29,7 @@ import { AgentAudioBubble } from '../components/AgentAudioBubble';
 import { VoiceComposer } from '../components/VoiceComposer';
 import { ChatHeader } from '../components/ChatHeader';
 import { HistoryBottomSheet } from '../components/HistoryBottomSheet';
+import { SuggestionCarousel } from '../components/SuggestionCarousel';
 import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
 import { digestFileSha256 } from '@/services/api/mediaChecksum';
 import { newIdempotencyKey } from '@/core/network/idempotency';
@@ -51,6 +53,8 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
   const { pendingMessages, send: sendTextStream, retry, streamingState: textStreamingState } = useSendPracticeMessageStream(sessionId);
   const { sendVoice: sendVoiceStream, streamingState: voiceStreamingState } = useSendVoiceMessageStream(sessionId);
   const { createSession: createSessionStream, streamingState: greetingStreamingState } = useCreatePracticeSessionStream();
+  const suggestions = usePracticeSuggestions(sessionId);
+  const [suggestionsVisible, setSuggestionsVisible] = useState(false);
 
   const [sendError, setSendError] = useState<string | null>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -234,6 +238,20 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     navigation.setParams({ sessionId: newSessionId, agentCode: newAgentCode, categoryId: newCategoryId });
   }, [navigation]);
 
+  // Toggle section suggestions: fetch HANYA saat user membuka dan belum ada
+  // hasil — suggestions milik turn ini tetap tampil saat user hide/show lagi.
+  const handleToggleSuggestions = useCallback(() => {
+    setSuggestionsVisible((prev) => {
+      const next = !prev;
+      if (next && suggestions.suggestions.length === 0 && !suggestions.isLoading) {
+        suggestions.fetchSuggestions();
+      }
+      return next;
+    });
+  }, [suggestions]);
+
+  const handleCloseSuggestions = useCallback(() => setSuggestionsVisible(false), []);
+
   // Reset state when session changes
   useEffect(() => {
     setSendError(null);
@@ -244,6 +262,9 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     autoplayedIdsRef.current = new Set();
     pendingAutoplayRef.current = [];
     audio.stop();
+    // Suggestions terikat konteks percakapan session lama — reset & tutup.
+    setSuggestionsVisible(false);
+    suggestions.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
@@ -375,11 +396,23 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
       ) : null}
 
       <View className="mt-auto">
+        {suggestionsVisible ? (
+          <SuggestionCarousel
+            suggestions={suggestions.suggestions}
+            loading={suggestions.isLoading}
+            errorMessage={suggestions.error ? userMessageForError(suggestions.error).message : null}
+            onRetry={suggestions.fetchSuggestions}
+            onClose={handleCloseSuggestions}
+          />
+        ) : null}
         <VoiceComposer
           onSendText={handleSendText}
           onSendVoice={handleSendVoice}
           onStartRecording={audio.stop}
           disabled={sessionId === null || session.data?.state !== 'active' || isDeleting || isCreatingNewChat || isStreaming}
+          onToggleSuggestions={handleToggleSuggestions}
+          suggestionsActive={suggestionsVisible}
+          suggestionsDisabled={sessionId === null || session.data?.state !== 'active' || isStreaming}
         />
       </View>
 

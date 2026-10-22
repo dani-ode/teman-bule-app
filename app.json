@@ -44,7 +44,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow TemanBule to record voice messages and join voice calls."
+          "microphonePermission": "Allow TemanBule to record voice messages and join voice calls.",
+          "enableBackgroundRecording": true
         }
       ]
     ],

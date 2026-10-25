@@ -26,6 +26,12 @@ export interface LoadingStatusProps {
   readonly done: boolean;
   /** Dipanggil sekali saat seluruh urutan selesai. */
   readonly onFinished?: () => void;
+  /**
+   * Saat true, langkah terakhir yang holdUntilDone TETAP ditampilkan selama
+   * proses nyata belum selesai (done=false), sehingga user tidak menatap
+   * layar blank menunggu jawaban AI.
+   */
+  readonly holdVisible?: boolean;
 }
 
 const randomInRange = (min: number, max: number): number =>
@@ -35,6 +41,7 @@ export const LoadingStatus: React.FC<LoadingStatusProps> = ({
   steps,
   done,
   onFinished,
+  holdVisible = false,
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
   const [finished, setFinished] = useState(false);
@@ -85,6 +92,10 @@ export const LoadingStatus: React.FC<LoadingStatusProps> = ({
   if (finished || steps.length === 0) return null;
 
   const step = steps[Math.min(stepIndex, steps.length - 1)];
+  const isLastStep = stepIndex >= steps.length - 1;
+  // Pada langkah hold terakhir: sembunyikan saat proses selesai (default),
+  // atau tetap tampil menunggu hasil nyata bila holdVisible aktif.
+  if (isLastStep && step.holdUntilDone && (holdVisible ? done : !done)) return null;
 
   return (
     <View

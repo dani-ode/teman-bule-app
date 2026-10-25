@@ -9,41 +9,43 @@ import { Text } from '@/ui/components/Text';
 import { Button } from '@/ui/components/Button';
 import { FormField } from '@/ui/components/FormField';
 import { ErrorState } from '@/ui/components/States';
+import { LoadingSpinner } from '@/ui/components/LoadingSpinner';
 import { theme } from '@/ui/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
+
+type SubmitStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
   const [token, setToken] = useState(route.params?.token ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState<SubmitStatus>('idle');
   const [error, setError] = useState<{ message: string; requestId: string | null } | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
 
+  const submitting = status === 'submitting';
   const canSubmit = token.trim().length > 0 && password.length >= 8 && confirm.length > 0 && !submitting;
 
   const handleSubmit = async () => {
     setFieldError(null);
+    setError(null);
     if (password !== confirm) {
       setFieldError('Password confirmation does not match.');
       return;
     }
     if (!canSubmit) return;
-    setSubmitting(true);
-    setError(null);
+    setStatus('submitting');
     try {
       await getServices().authService.resetPassword(token.trim(), password);
-      setDone(true);
+      setStatus('success');
     } catch (err) {
       setError(userMessageForError(err));
-    } finally {
-      setSubmitting(false);
+      setStatus('error');
     }
   };
 
-  if (done) {
+  if (status === 'success') {
     return (
       <View className="flex-1 p-6 justify-center items-center bg-background-main">
         <View className="w-24 h-24 rounded-full bg-[#e8f0e0] items-center justify-center mb-6">
@@ -53,7 +55,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
           Password updated
         </Text>
         <Text variant="body" color="secondary" align="center" className="mb-4">
-          Please sign in with your new password.
+          Your password has been changed successfully. Please sign in with your new password.
         </Text>
         <Button
           label="Sign In"
@@ -79,9 +81,21 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
         </Text>
       </View>
 
-      {error ? (
-        <View className="mb-3">
-          <ErrorState message={error.message} requestId={error.requestId} />
+      {submitting ? (
+        <View className="mb-4 items-center">
+          <LoadingSpinner message="Updating password..." />
+        </View>
+      ) : null}
+
+      {error && status === 'error' ? (
+        <View className="mb-4">
+          <ErrorState
+            title="Reset failed"
+            message={error.message}
+            requestId={error.requestId}
+            onRetry={handleSubmit}
+            retryLabel="Try Again"
+          />
         </View>
       ) : null}
 
@@ -117,7 +131,7 @@ export const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
       />
 
       <Button
-        label="Save"
+        label={submitting ? 'Saving...' : 'Save'}
         onPress={handleSubmit}
         disabled={!canSubmit}
         loading={submitting}

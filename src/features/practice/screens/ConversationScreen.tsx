@@ -17,6 +17,12 @@ import {
   useCreatePracticeSessionStream,
 } from '../hooks/usePracticeStream';
 import { mergeMessages, MergedMessage } from '../hooks/messageReducer';
+import {
+  AgentProgressStage,
+  agentProgressSteps,
+  isAgentProgressActive,
+  reduceAgentProgress,
+} from '../hooks/agentProgressReducer';
 import { useConversationAudioPlayer } from '../hooks/useConversationAudioPlayer';
 import { userMessageForError } from '@/core/errors/errorMessage';
 import { getServices } from '@/core/di/ServiceContainer';
@@ -30,6 +36,7 @@ import { VoiceComposer } from '../components/VoiceComposer';
 import { ChatHeader } from '../components/ChatHeader';
 import { HistoryBottomSheet } from '../components/HistoryBottomSheet';
 import { SuggestionCarousel } from '../components/SuggestionCarousel';
+import { LoadingStatus } from '../components/LoadingStatus';
 import { AgentCode, ConversationMessage } from '@/domain/practice/practice.types';
 import { digestFileSha256 } from '@/services/api/mediaChecksum';
 import { newIdempotencyKey } from '@/core/network/idempotency';
@@ -62,6 +69,14 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
   const createSessionStarted = useRef(false);
 
+  // Progres AI yang tampil di ruang chat: tidak pernah blank/hang. Tahap tidak
+  // bisa mundur; fase upload/transcribe voice (sebelum SSE) ikut digabung.
+  const [agentProgressStage, setAgentProgressStage] = useState<AgentProgressStage>('idle');
+  const agentProgressIsVoice = useRef(false);
+  const bumpAgentProgress = useCallback((stage: AgentProgressStage) => {
+    setAgentProgressStage(prev => reduceAgentProgress(prev, stage));
+  }, []);
+
   // SATU player audio untuk seluruh conversation (TTS AI + voice note user).
   // Bubbles jadi controlled → tidak ada player per-item yang bisa ter-release.
   const audio = useConversationAudioPlayer();
@@ -72,6 +87,35 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const currentAgent = useMemo(() => agentsQuery.data?.find(a => a.code === agentCode) ?? null, [agentsQuery.data, agentCode]);
   const currentCategory = useMemo(() => categoriesQuery.data?.find(c => c.categoryId === categoryId) ?? null, [categoriesQuery.data, categoryId]);
+
+  const isStreaming = greetingStreamingState.status === 'streaming' || textStreamingState.status === 'streaming' || voiceStreamingState.status === 'streaming';
+
+  // Sinkronkan tahap SSE tiga hook streaming → indikator progres AI.
+  useEffect(() => {
+    if (greetingStreamingState.status === 'streaming' && greetingStreamingState.stage) {
+      agentProgressIsVoice.current = false;
+      bumpAgentProgress(greetingStreamingState.stage);
+    }
+  }, [greetingStreamingState.status, greetingStreamingState.stage, bumpAgentProgress]);
+
+  useEffect(() => {
+    if (textStreamingState.status === 'streaming' && textStreamingState.stage) {
+      agentProgressIsVoice.current = false;
+      bumpAgentProgress(textStreamingState.stage);
+    }
+  }, [textStreamingState.status, textStreamingState.stage, bumpAgentProgress]);
+
+  useEffect(() => {
+    if (voiceStreamingState.status === 'streaming' && voiceStreamingState.stage) {
+      agentProgressIsVoice.current = true;
+      bumpAgentProgress(voiceStreamingState.stage);
+    }
+  }, [voiceStreamingState.status, voiceStreamingState.stage, bumpAgentProgress]);
+
+  // Reset progres saat semua stream selesai / gagal (indikator hilang).
+  useEffect(() => {
+    if (!isStreaming) setAgentProgressStage('idle');
+  }, [isStreaming]);
 
   const merged: MergedMessage[] = mergeMessages(messages.data ?? [], pendingMessages);
 
@@ -153,6 +197,8 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     if (!sessionId) return;
     setSendError(null);
     audio.stop();
+    agentProgressIsVoice.current = true;
+    setAgentProgressStage('uploading');
 
     const optimisticId = `local-voice-${Date.now()}`;
     const optimisticMsg: ConversationMessage = {
@@ -181,6 +227,7 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
       getServices().mediaService.assertMediaReady(finalizeResult);
 
       // HIT 2: Transcribe audio (STT) untuk mendapatkan text pesan.
+      bumpAgentProgress('transcribing');
       const transcriptText = await getServices().mediaService.transcribe(finalizeResult.mediaId);
 
       // Tampilkan transcript pada bubble optimistic agar user langsung melihatnya.
@@ -261,6 +308,9 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     setNewMessageIds(new Set());
     autoplayedIdsRef.current = new Set();
     pendingAutoplayRef.current = [];
+    // Progres turn sebelumnya jangan bocor ke session baru.
+    agentProgressIsVoice.current = false;
+    setAgentProgressStage('idle');
     audio.stop();
     // Suggestions terikat konteks percakapan session lama — reset & tutup.
     setSuggestionsVisible(false);
@@ -313,7 +363,19 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merged, newMessageIds]);
 
-  const isStreaming = greetingStreamingState.status === 'streaming' || textStreamingState.status === 'streaming' || voiceStreamingState.status === 'streaming';
+  // Indikator tampil saat proses AI berjalan, termasuk fase upload/transcribe
+  // voice sebelum SSE dimulai. Tidak tampil saat history sedang dimuat/error.
+  const showAgentProgress =
+    isAgentProgressActive(agentProgressStage) &&
+    (sessionId === null || (!messages.isLoading && !isResuming && !messages.isError));
+  const agentName = currentAgent?.displayName ?? 'Your partner';
+  const progressSteps = useMemo(
+    () => agentProgressSteps({ stage: agentProgressStage, agentName, isVoice: agentProgressIsVoice.current }),
+    [agentProgressStage, agentName],
+  );
+  const agentProgressFooter = showAgentProgress ? (
+    <LoadingStatus steps={progressSteps} done={!isStreaming} holdVisible />
+  ) : null;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.colors.background.main }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
@@ -326,7 +388,13 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
         onBack={() => navigation.goBack()}
       />
 
-      {sessionId !== null && (messages.isLoading || isResuming || hydratedSessionKey !== sessionId) ? (
+      {sessionId === null ? (
+        // Sesi baru sedang dibuat: greeting AI di-stream. Jangan biarkan layar
+        // blank — tampilkan status bertahap agar user tahu proses berjalan.
+        <View className="flex-1 justify-center">
+          {agentProgressFooter ?? <LoadingSpinner message={`Connecting to ${agentName}...`} />}
+        </View>
+      ) : messages.isLoading || isResuming || hydratedSessionKey !== sessionId ? (
         <View className="flex-1 justify-center"><LoadingSpinner message="Loading history..." /></View>
       ) : messages.isError ? (
         <View className="flex-1">
@@ -385,7 +453,8 @@ export const ConversationScreen: React.FC<Props> = ({ navigation, route }) => {
               />
             );
           }}
-          ListEmptyComponent={isStreaming ? null : <EmptyState title="Start a conversation" message="Hold the microphone button to record a voice message, or tap the chat icon to type." icon="chatbubble-ellipses-outline" />}
+          ListEmptyComponent={showAgentProgress ? null : <EmptyState title="Start a conversation" message="Hold the microphone button to record a voice message, or tap the chat icon to type." icon="chatbubble-ellipses-outline" />}
+          ListFooterComponent={agentProgressFooter}
         />
       )}
 

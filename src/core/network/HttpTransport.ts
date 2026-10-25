@@ -133,13 +133,29 @@ export class HttpTransport {
     }
 
     try {
-      return await fetch(this.buildUrl(options.path), {
+      const response = await fetch(this.buildUrl(options.path), {
         method: options.method,
         headers,
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
         credentials: 'omit',
+        // React Native fetch does not follow 301/302 for POST; detect and fail fast.
+        redirect: 'manual',
       });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        throw new ClientError({
+          kind: 'config',
+          code: 'ERR_REDIRECT_DETECTED',
+          message: `Server redirected ${options.method} ${options.path} to ${location ?? 'another URL'}. ` +
+            'React Native fetch does not follow redirects for POST requests. ' +
+            'Update EXPO_PUBLIC_API_BASE_URL to the canonical URL (e.g. https:// instead of http://).',
+          httpStatus: response.status,
+        });
+      }
+
+      return response;
     } finally {
       clearTimeout(timeout);
     }
